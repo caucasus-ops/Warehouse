@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warehouse 3D Dashboard - 127 Doremus Ave, Newark NJ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1e;
+            color: #d8d8e8;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 20px 30px;
+            border-bottom: 2px solid #6b8fa3;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+            color: #e8e8e8;
+        }
+
+        .header p {
+            font-size: 14px;
+            color: #aabbcc;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 90px);
+            max-height: calc(100vh - 90px);
+        }
+
+        .model-section {
+            background: #1a1a2e;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border: 1px solid #2a3a4e;
+        }
+
+        #warehouse-model {
+            width: 100%;
+            height: 100%;
+        }
+
+        .specs-panel {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            border: 1px solid #2a3a4e;
+        }
+
+        .specs-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .specs-panel::-webkit-scrollbar-track {
+            background: #0f0f1e;
+        }
+
+        .specs-panel::-webkit-scrollbar-thumb {
+            background: #6b8fa3;
+            border-radius: 3px;
+        }
+
+        .specs-panel::-webkit-scrollbar-thumb:hover {
+            background: #7a9eb8;
+        }
+
+        .spec-section {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #2a3a4e;
+        }
+
+        .spec-section:last-child {
+            border-bottom: none;
+        }
+
+        .spec-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #6b8fa3;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .spec-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            font-size: 13px;
+            border-bottom: 1px solid #252538;
+        }
+
+        .spec-item:last-child {
+            border-bottom: none;
+        }
+
+        .spec-label {
+            color: #aabbcc;
+        }
+
+        .spec-value {
+            font-weight: 600;
+            color: #d4a574;
+        }
+
+        .metric-card {
+            background: #252538;
+            border-left: 3px solid #6b8fa3;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .metric-card.primary {
+            border-left-color: #d4a574;
+        }
+
+        .metric-card.secondary {
+            border-left-color: #7a8f8a;
+        }
+
+        .metric-label {
+            font-size: 11px;
+            color: #aabbcc;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e8e8e8;
+            margin-top: 4px;
+        }
+
+        .capacity-bar {
+            width: 100%;
+            height: 6px;
+            background: #1a1a2e;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .capacity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6b8fa3 0%, #7a9eb8 100%);
+            border-radius: 3px;
+        }
+
+        .utilization {
+            font-size: 10px;
+            color: #7a9eb8;
+            margin-top: 3px;
+        }
+
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .equipment-item {
+            background: #252538;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            border: 1px solid #2a3a4e;
+        }
+
+        .equipment-item strong {
+            color: #d4a574;
+        }
+
+        .equipment-item span {
+            color: #aabbcc;
+        }
+
+        .alert-banner {
+            background: #3a3a2e;
+            border-left: 3px solid #d4a574;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #d4a574;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 1400px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .specs-panel {
+                max-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 Warehouse 3D Dashboard</h1>
+        <p>127 Doremus Avenue, Newark, NJ 07105 | Real-time Capacity & Equipment Overview</p>
+    </div>
+
+    <div class="container">
+        <div class="model-section">
+            <iframe src="warehouse_3d.html" id="warehouse-model" style="border: none;"></iframe>
+        </div>
+
+        <div class="specs-panel">
+            <!-- Warehouse Dimensions -->
+            <div class="spec-section">
+                <div class="spec-title">📐 Dimensions & Space</div>
+                <div class="spec-item">
+                    <span class="spec-label">Length (X)</span>
+                    <span class="spec-value">48.85 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Width (Y)</span>
+                    <span class="spec-value">37.00 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Height (Z)</span>
+                    <span class="spec-value">19.875 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Total Floor Area</span>
+                    <span class="spec-value">1,808 sq ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Total Volume</span>
+                    <span class="spec-value">35,968 cu ft</span>
+                </div>
+            </div>
+
+            <!-- Stack Configuration -->
+            <div class="spec-section">
+                <div class="spec-title">📦 Stack Configuration</div>
+                <div class="spec-item">
+                    <span class="spec-label">Stack Positions</span>
+                    <span class="spec-value">17</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Levels per Stack</span>
+                    <span class="spec-value">4</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Stack Height</span>
+                    <span class="spec-value">16.0 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Pallet Width (PW)</span>
+                    <span class="spec-value">4.0 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Pallet Depth (PD)</span>
+                    <span class="spec-value">3.5 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Level Height</span>
+                    <span class="spec-value">4.0 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Clearance Above</span>
+                    <span class="spec-value">3.88 ft</span>
+                </div>
+            </div>
+
+            <!-- Storage Distribution -->
+            <div class="spec-section">
+                <div class="spec-title">📍 Storage Distribution</div>
+                <div class="spec-item">
+                    <span class="spec-label">North Wall</span>
+                    <span class="spec-value">10 stacks</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">East Wall</span>
+                    <span class="spec-value">7 stacks</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">South Wall</span>
+                    <span class="spec-value">— (Office area)</span>
+                </div>
+            </div>
+
+            <!-- Access & Equipment -->
+            <div class="spec-section">
+                <div class="spec-title">🚪 Access & Equipment</div>
+                <div class="alert-banner">
+                ⚠️ HPS Permit Required (12+ ft storage height)
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Main Door Width</span>
+                    <span class="spec-value">14.4 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Door Height</span>
+                    <span class="spec-value">14.0 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Aisle Width (Center)</span>
+                    <span class="spec-value">24.425 ft</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Forklift Class</span>
+                    <span class="spec-value">Class 7 (Sit-Down)</span>
+                </div>
+            </div>
+
+            <!-- Offices -->
+            <div class="spec-section">
+                <div class="spec-title">🏢 Office Structures</div>
+                <div class="equipment-grid">
+                    <div class="equipment-item">
+                        <strong>Office 1</strong>
+                        <br><span>10 × 9 × 10 ft</span>
+                    </div>
+                    <div class="equipment-item">
+                        <strong>Office 2</strong>
+                        <br><span>14 × 9 × 10 ft</span>
+                    </div>
+                </div>
+                <div style="font-size: 11px; color: #aabbcc; margin-top: 8px;">
+                    Combined footprint: ~216 sq ft (12% of floor)
+                </div>
+            </div>
+
+            <!-- Compliance -->
+            <div class="spec-section">
+                <div class="spec-title">✅ Compliance & Standards</div>
+                <div class="equipment-grid">
+                    <div class="equipment-item">
+                        <strong>RMI</strong>
+                        <br><span>Compliant</span>
+                    </div>
+                    <div class="equipment-item">
+                        <strong>OSHA</strong>
+                        <br><span>Compliant</span>
+                    </div>
+                    <div class="equipment-item">
+                        <strong>NJ Seismic</strong>
+                        <br><span>Compliant</span>
+                    </div>
+                    <div class="equipment-item">
+                        <strong>Fire Code</strong>
+                        <br><span>HPS Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recommended Equipment -->
+            <div class="spec-section">
+                <div class="spec-title">🔧 Recommended Equipment</div>
+                <div class="spec-item">
+                    <span class="spec-label">Forklift Capacity</span>
+                    <span class="spec-value">3,000 lbs</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Sprinkler System</span>
+                    <span class="spec-value">Required</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Fire Alarms</span>
+                    <span class="spec-value">Required</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Emergency Lighting</span>
+                    <span class="spec-value">Required</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Aisle Markings</span>
+                    <span class="spec-value">Yellow painted</span>
+                </div>
+            </div>
+
+            <!-- Estimated Costs -->
+            <div class="spec-section">
+                <div class="spec-title">💰 Estimated Installation Costs</div>
+                <div class="alert-banner" style="border-left-color: #d4a574; background: #3a3a2e;">
+                    ℹ️ Newark, NJ pricing (2026) — Urban area rates
+                </div>
+
+                <div style="font-size: 12px; color: #aabbcc; margin-bottom: 10px;">
+                    <strong style="color: #d4a574;">Pallet Racks (68 slots):</strong>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Materials & Hardware</span>
+                    <span class="spec-value">$3.4K–$7.6K</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Installation Labor</span>
+                    <span class="spec-value">$3.4K–$5.1K</span>
+                </div>
+
+                <div style="font-size: 12px; color: #aabbcc; margin: 12px 0 10px;">
+                    <strong style="color: #d4a574;">Permits & Engineering:</strong>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Building Permit (UCC-F100)</span>
+                    <span class="spec-value">$800–$1.2K</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">HPS Permit & Review</span>
+                    <span class="spec-value">$1.5K–$2.5K</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Structural Engineer Stamp</span>
+                    <span class="spec-value">$700–$1.2K</span>
+                </div>
+
+                <div style="font-size: 12px; color: #aabbcc; margin: 12px 0 10px;">
+                    <strong style="color: #d4a574;">Safety Equipment:</strong>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Fire Suppression (if new)</span>
+                    <span class="spec-value">$3K–$8K</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Emergency Lighting</span>
+                    <span class="spec-value">$800–$1.5K</span>
+                </div>
+                <div class="spec-item">
+                    <span class="spec-label">Fire Alarms & Signage</span>
+                    <span class="spec-value">$500–$1K</span>
+                </div>
+
+                <div style="border-top: 1px solid #2a3a4e; padding-top: 12px; margin-top: 12px;">
+                    <div style="font-size: 12px; color: #aabbcc; margin-bottom: 8px;">
+                        <strong style="color: #d4a574;">Total Project Cost Range:</strong>
+                    </div>
+                    <div class="metric-card primary" style="margin-bottom: 0;">
+                        <div class="metric-label">Budget Option</div>
+                        <div class="metric-value" style="color: #7a9eb8;">$8K–$12K</div>
+                        <div class="utilization">Used racks, basic install</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <div class="metric-card" style="margin-bottom: 0;">
+                        <div class="metric-label">Mid-Range Option</div>
+                        <div class="metric-value" style="color: #d4a574;">$15K–$22K</div>
+                        <div class="utilization">New selective racks, full service</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 10px;">
+                    <div class="metric-card secondary" style="margin-bottom: 0;">
+                        <div class="metric-label">Premium Option</div>
+                        <div class="metric-value" style="color: #7a8f8a;">$25K–$35K</div>
+                        <div class="utilization">Heavy-duty, integrated systems</div>
+                    </div>
+                </div>
+
+                <div style="font-size: 11px; color: #aabbcc; margin-top: 12px; padding-top: 12px; border-top: 1px solid #2a3a4e;">
+                    <strong>Note:</strong> Prices exclude existing sprinkler/alarm upgrades. Get quotes from local Newark vendors (Diversified Rack, First Access, East Coast Storage) for exact pricing.
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
