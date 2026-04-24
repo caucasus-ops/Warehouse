@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>CAI Fleet Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        body {
+            background: #f5f5f5;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            color: #111111;
+            font-size: 14px;
+            line-height: 1.5
+        }
+
+        #app {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 20px 48px
+        }
+
+        /* HEADER */
+        .hd {
+            background: #fff;
+            border-bottom: 1px solid #e5e5e5;
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+            margin-bottom: 20px
+        }
+
+        .hd-left {}
+
+        .ht {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #111111;
+            letter-spacing: -.02em
+        }
+
+        .ht span {
+            color: #333333
+        }
+
+        .hs {
+            font-size: .68rem;
+            color: #777777;
+            margin-top: 1px
+        }
+
+        .hd-right {
+            display: flex;
+            align-items: center;
+            gap: 14px
+        }
+
+        .upd-info {
+            text-align: right;
+            font-size: .65rem;
+            color: #777777;
+            line-height: 1.6
+        }
+
+        .upd-info strong {
+            color: #555555;
+            display: block
+        }
+
+        /* REFRESH BUTTON */
+        .btn-ref {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #333333;
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background .15s;
+            letter-spacing: .02em;
+            white-space: nowrap
+        }
+
+        .btn-ref:hover {
+            background: #111111
+        }
+
+        .btn-ref.loading {
+            background: #cccccc;
+            cursor: not-allowed;
+            pointer-events: none
+        }
+
+        .btn-ref svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0
+        }
+
+        .btn-ref.loading svg {
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* FILTER BAR */
+        .fb {
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap
+        }
+
+        .fl {
+            font-size: .62rem;
+            font-weight: 700;
+            color: #777777;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            margin-right: 2px
+        }
+
+        .mb {
+            font-size: .65rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 5px;
+            background: #fafafa;
+            color: #555555;
+            cursor: pointer;
+            transition: all .12s
+        }
+
+        .mb:hover {
+            border-color: #cccccc;
+            color: #333333;
+            background: #f5f5f5
+        }
+
+        .mb.on {
+            background: #333333;
+            color: #fff;
+            border-color: #333333
+        }
+
+        .fb-sep {
+            width: 1px;
+            height: 18px;
+            background: #e5e5e5;
+            margin: 0 4px;
+            flex-shrink: 0
+        }
+
+        .pb {
+            font-size: .65rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 5px;
+            background: #fafafa;
+            color: #555555;
+            cursor: pointer;
+            transition: all .12s
+        }
+
+        .pb:hover {
+            border-color: #cccccc;
+            color: #333333;
+            background: #f5f5f5
+        }
+
+        .pb.on {
+            background: #111111;
+            color: #fff;
+            border-color: #111111
+        }
+
+        /* PERIOD LABEL */
+        .pt {
+            text-align: center;
+            margin-bottom: 16px;
+            font-size: .95rem;
+            font-weight: 700;
+            color: #111111;
+            letter-spacing: -.01em
+        }
+
+        .pt span {
+            color: #333333
+        }
+
+        /* SECTION HEADER */
+        .sh {
+            font-size: .62rem;
+            font-weight: 700;
+            color: #777777;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e5e5e5;
+            margin: 22px 0 12px
+        }
+
+        /* KPI CARDS */
+        .kr {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px
+        }
+
+        .kc {
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
+            padding: 16px 14px;
+            position: relative;
+            overflow: hidden
+        }
+
+        .kc::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #333333, #555555)
+        }
+
+        .kl {
+            font-size: .62rem;
+            font-weight: 600;
+            color: #777777;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            margin-bottom: 8px
+        }
+
+        .kn {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #111111;
+            line-height: 1;
+            letter-spacing: -.02em
+        }
+
+        .ks {
+            font-size: .62rem;
+            color: #aaaaaa;
+            margin-top: 5px
+        }
+
+        /* CHART GRID */
+        .c3 {
+            display: grid;
+            grid-template-columns: 2fr 1fr 2fr;
+            gap: 12px
+        }
+
+        .c2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px
+        }
+
+        .c1 {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px
+        }
+
+        .cb {
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
+            padding: 16px
+        }
+
+        .ct {
+            font-size: .62rem;
+            font-weight: 700;
+            color: #777777;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f5f5f5
+        }
+
+        .cw {
+            position: relative;
+            height: 260px
+        }
+
+        .cw-lg {
+            position: relative;
+            height: 360px
+        }
+
+        /* POD CENTER LABEL */
+        #pod-mid {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -62%);
+            text-align: center;
+            pointer-events: none
+        }
+
+        #pod-pct {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111111;
+            letter-spacing: -.02em
+        }
+
+        #pod-lbl {
+            font-size: .6rem;
+            font-weight: 600;
+            color: #777777;
+            letter-spacing: .1em;
+            text-transform: uppercase
+        }
+
+        /* SHIPPING LINE OVERFLOW */
+        #sl-o {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #f5f5f5;
+            font-size: .62rem;
+            color: #777777;
+            line-height: 1.9
+        }
+
+        /* TERMINAL BAR LIST */
+        #tb {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            margin-top: 6px
+        }
+
+        .tbr {
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .tn {
+            font-size: .63rem;
+            font-weight: 600;
+            color: #555555;
+            width: 76px;
+            flex-shrink: 0
+        }
+
+        .tbg {
+            flex: 1;
+            background: #f5f5f5;
+            height: 14px;
+            border-radius: 4px;
+            overflow: hidden
+        }
+
+        .tbf {
+            height: 100%;
+            background: #333333;
+            border-radius: 4px;
+            transition: width .4s ease
+        }
+
+        .tc {
+            font-size: .78rem;
+            font-weight: 700;
+            color: #111111;
+            width: 24px;
+            text-align: right;
+            flex-shrink: 0
+        }
+
+        .tcc {
+            font-size: .6rem;
+            color: #777777;
+            width: 58px;
+            text-align: right;
+            flex-shrink: 0
+        }
+
+        /* FLEET STATUS */
+        .sr {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px
+        }
+
+        .sb {
+            background: #fff;
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
+            padding: 24px 16px;
+            text-align: center
+        }
+
+        .s1 {
+            border-top: 3px solid #111111
+        }
+
+        .s2 {
+            border-top: 3px solid #333333
+        }
+
+        .s3 {
+            border-top: 3px solid #777777
+        }
+
+        .stl {
+            font-size: .62rem;
+            font-weight: 700;
+            color: #777777;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            margin-bottom: 10px
+        }
+
+        .stn {
+            font-size: 2.8rem;
+            font-weight: 700;
+            color: #111111;
+            line-height: 1;
+            letter-spacing: -.03em
+        }
+
+        .stc {
+            font-size: .68rem;
+            color: #777777;
+            margin-top: 8px
+        }
+
+        /* TABLES */
+        .si {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: .72rem;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            background: #fff;
+            color: #111111;
+            outline: none;
+            margin-bottom: 10px;
+            transition: border .15s
+        }
+
+        .si:focus {
+            border-color: #cccccc;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, .08)
+        }
+
+        .si::placeholder {
+            color: #aaaaaa
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        thead tr {
+            background: #fafafa;
+            border-bottom: 2px solid #e5e5e5
+        }
+
+        thead th {
+            font-size: .6rem;
+            font-weight: 700;
+            color: #555555;
+            letter-spacing: .09em;
+            text-transform: uppercase;
+            padding: 9px 8px;
+            text-align: left;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none
+        }
+
+        thead th:hover {
+            color: #333333
+        }
+
+        thead th[data-c]:hover::after {
+            content: " ↕";
+            opacity: .5
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #fafafa;
+            transition: background .08s
+        }
+
+        tbody tr:hover {
+            background: #fafafa
+        }
+
+        td {
+            font-size: .7rem;
+            color: #222222;
+            padding: 7px 8px;
+            white-space: nowrap
+        }
+
+        /* BADGES */
+        .bp {
+            background: #e5e5e5;
+            color: #222222;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: .6rem;
+            font-weight: 700;
+            letter-spacing: .04em
+        }
+
+        .bb {
+            background: #222222;
+            color: #fafafa;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: .6rem;
+            font-weight: 700;
+            letter-spacing: .04em
+        }
+
+        .bg {
+            background: #e5e5e5;
+            color: #333333;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: .6rem;
+            font-weight: 700
+        }
+
+        .bcan {
+            background: #e5e5e5;
+            color: #333333;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-size: .6rem;
+            font-weight: 700
+        }
+
+        .nn {
+            font-weight: 700;
+            color: #111111
+        }
+
+        .st-fp {
+            background: #e5e5e5;
+            color: #111111;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: .6rem;
+            font-weight: 600
+        }
+
+        .st-er {
+            background: #e5e5e5;
+            color: #333333;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: .6rem;
+            font-weight: 600
+        }
+
+        .st-or {
+            background: #e5e5e5;
+            color: #333333;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: .6rem;
+            font-weight: 600
+        }
+
+        /* FOOTER */
+        .ft {
+            text-align: center;
+            padding: 20px;
+            margin-top: 8px
+        }
+
+        .ft p {
+            font-size: .62rem;
+            color: #aaaaaa;
+            letter-spacing: .04em
+        }
+
+        /* TOAST */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: .72rem;
+            font-weight: 600;
+            color: #fff;
+            opacity: 0;
+            transition: opacity .3s;
+            z-index: 999;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, .15)
+        }
+
+        #toast.show {
+            opacity: 1
+        }
+
+        #toast.ok {
+            background: #555555
+        }
+
+        #toast.err {
+            background: #333333
+        }
+
+        /* SETUP HINT */
+        .hint {
+            background: #f5f5f5;
+            border: 1px solid #dddddd;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            font-size: .72rem;
+            color: #222222;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px
+        }
+
+        .hint b {
+            display: block;
+            margin-bottom: 2px
+        }
+
+        .hint code {
+            background: #e5e5e5;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: .68rem
+        }
+
+        @media(max-width:960px) {
+            .kr {
+                grid-template-columns: repeat(2, 1fr)
+            }
+
+            .c3,
+            .c2,
+            .sr {
+                grid-template-columns: 1fr
+            }
+
+            .hd {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px
+            }
+
+            .cw-lg {
+                height: 480px
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+
+        <!-- ═══ HEADER ═══ -->
+        <div class="hd">
+            <div class="hd-left">
+                <div class="ht">CAI <span>Fleet Monitor</span></div>
+                <div class="hs">Container Shipment Tracking &amp; Port Analytics
+                </div>
+            </div>
+            <div class="hd-right">
+                <div class="upd-info"><strong>Last updated</strong><span id="last-upd">Loaded from file</span></div>
+                <button class="btn-ref" id="btn-ref" onclick="refreshData()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    <span>Refresh from Sheet</span>
+                </button>
+            </div>
+        </div>
+
+
+
+        <!-- ═══ FILTER BAR ═══ -->
+        <div class="fb">
+            <span class="fl">Month:</span>
+            <button class="mb" data-m="2025-07">Jul 25</button>
+            <button class="mb" data-m="2025-08">Aug 25</button>
+            <button class="mb" data-m="2025-09">Sep 25</button>
+            <button class="mb" data-m="2025-10">Oct 25</button>
+            <button class="mb" data-m="2025-11">Nov 25</button>
+            <button class="mb" data-m="2025-12">Dec 25</button>
+            <button class="mb" data-m="2026-01">Jan 26</button>
+            <button class="mb" data-m="2026-02">Feb 26</button>
+            <button class="mb" data-m="2026-03">Mar 26</button>
+            <button class="mb" data-m="2026-04">Apr 26</button>
+            <div class="fb-sep"></div>
+            <button class="pb on" data-r="all">All</button>
+            <button class="pb" data-r="q3">Q3 2025</button>
+            <button class="pb" data-r="q4">Q4 2025</button>
+            <button class="pb" data-r="q1">Q1 2026</button>
+            <button class="pb" data-r="q2">Q2 2026</button>
+        </div>
+
+        <!-- PERIOD LABEL -->
+        <div class="pt" id="pd">JUL 2025 — <span>APR 2026</span></div>
+
+        <!-- ═══ KPIs ═══ -->
+        <div class="sh">Key Performance Indicators</div>
+        <div class="kr">
+            <div class="kc">
+                <div class="kl">Total Vessels</div>
+                <div class="kn" id="kv">0</div>
+                <div class="ks">unique sailings</div>
+            </div>
+            <div class="kc">
+                <div class="kl">Total Containers</div>
+                <div class="kn" id="kt">0</div>
+                <div class="ks">all origins</div>
+            </div>
+            <div class="kc">
+                <div class="kl">From US</div>
+                <div class="kn" id="ku">0</div>
+                <div class="ks">US origin</div>
+            </div>
+            <div class="kc">
+                <div class="kl">From Canada</div>
+                <div class="kn" id="kc">0</div>
+                <div class="ks">Canadian cargo</div>
+            </div>
+            <div class="kc">
+                <div class="kl">Via T/S Port</div>
+                <div class="kn" id="kts">0</div>
+                <div class="ks">transshipment</div>
+            </div>
+        </div>
+
+        <!-- ═══ SHIPPING LINE & DISTRIBUTION ═══ -->
+        <div class="sh">Shipping Line &amp; Distribution</div>
+        <div class="c3">
+            <div class="cb">
+                <div class="ct">Containers by Shipping Line (Top 6)</div>
+                <div class="cw"><canvas id="csl"></canvas></div>
+                <div id="sl-o"></div>
+            </div>
+            <div class="cb">
+                <div class="ct">Port of Discharge</div>
+                <div class="cw" style="position:relative">
+                    <canvas id="cpod"></canvas>
+                    <div id="pod-mid">
+                        <div id="pod-pct">—</div>
+                        <div id="pod-lbl">POTI</div>
+                    </div>
+                </div>
+            </div>
+            <div class="cb">
+                <div class="ct">Monthly Container Volume</div>
+                <div class="cw"><canvas id="cmon"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ═══ TRANSSHIPMENT & TERMINAL ═══ -->
+        <div class="sh">Transshipment &amp; Terminal</div>
+        <div class="c2">
+            <div class="cb">
+                <div class="ct">Transshipment Ports</div>
+                <div class="cw"><canvas id="cts"></canvas></div>
+            </div>
+            <div class="cb">
+                <div class="ct">Terminal Distribution (vessels / containers)</div>
+                <div id="tb"></div>
+            </div>
+        </div>
+
+        <!-- ═══ NEW: DISTRIBUTION PER VESSEL ═══ -->
+        <div class="sh">Container Distribution by Vessel</div>
+        <div class="c1">
+            <div class="cb">
+                <div class="ct">Top 20 Vessels — Total Containers (US vs Canada, stacked)</div>
+                <div class="cw-lg"><canvas id="cvessel"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ═══ NEW: DISTRIBUTION PER TERMINAL ═══ -->
+        <div class="sh">Container Distribution by Terminal</div>
+        <div class="c2">
+            <div class="cb">
+                <div class="ct">Containers per Terminal — US vs Canada</div>
+                <div class="cw"><canvas id="cterm"></canvas></div>
+            </div>
+            <div class="cb">
+                <div class="ct">Terminal Share of Total Containers</div>
+                <div class="cw"><canvas id="ctermdonut"></canvas></div>
+            </div>
+        </div>
+
+        <!-- ═══ FLEET STATUS ═══ -->
+        <div class="sh">Current Fleet Status</div>
+        <div class="sr">
+            <div class="sb s1">
+                <div class="stl">At Final Port</div>
+                <div class="stn" id="sfp">0</div>
+                <div class="stc" id="sfpc">0 containers</div>
+            </div>
+            <div class="sb s2">
+                <div class="stl">En Route</div>
+                <div class="stn" id="ser">0</div>
+                <div class="stc" id="serc">0 containers</div>
+            </div>
+            <div class="sb s3">
+                <div class="stl">On Raid</div>
+                <div class="stn" id="sor">0</div>
+                <div class="stc" id="sorc">0 containers</div>
+            </div>
+        </div>
+
+        <!-- ═══ CANADIAN CARGO TABLE ═══ -->
+        <div class="sh" style="margin-top:10px">Vessels with Canadian Cargo</div>
+        <div class="ts">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vessel</th>
+                        <th>SL</th>
+                        <th>ETA</th>
+                        <th>POD</th>
+                        <th>Terminal</th>
+                        <th>CAN</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="ctb"></tbody>
+            </table>
+        </div>
+
+        <!-- ═══ FULL MANIFEST ═══ -->
+        <div class="sh" style="margin-top:10px">Complete Vessel Manifest</div>
+        <div class="tm">
+            <input class="si" id="si" type="text" placeholder="Search vessels, line, port, terminal…">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th data-c="sl">SL</th>
+                        <th data-c="vessel">Vessel</th>
+                        <th data-c="eta">ETA</th>
+                        <th data-c="ts">T/S Port</th>
+                        <th data-c="pod">POD</th>
+                        <th data-c="terminal">Terminal</th>
+                        <th data-c="status">Status</th>
+                        <th data-c="qntAll">All</th>
+                        <th data-c="qntUS">US</th>
+                        <th data-c="qntCan">CAN</th>
+                    </tr>
+                </thead>
+                <tbody id="mtb"></tbody>
+            </table>
+        </div>
+
+        <!-- ═══ FOOTER ═══ -->
+        <div class="ft">
+            <p>CAI Logistics Intelligence · Source: Vessel Tracking Sheet · Data via Google Sheets</p>
+        </div>
+
+    </div><!-- /#app -->
+    <div id="toast"></div>
+
+    <script>
+        // ============================================================
+        // ① CONFIG — paste your published Google Sheet CSV URL below
+        // ============================================================
+        var SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQTzmLPiwTe4KcUf_SMQEnjYDAlO09Wz7-5XSoRsx5HZv1JUERCnq30sl3kStP7zxIEas0CWySaUKWA/pub?gid=356020332&single=true&output=csv';
+
+        // Column header mapping: left = your sheet's header, right = internal field name
+        var COL_MAP = {
+            'Shipping Line': 'sl', 'SL': 'sl', 'sl': 'sl',
+            'Vessel': 'vessel', 'vessel': 'vessel', 'VESSEL': 'vessel',
+            'ETA': 'eta', 'eta': 'eta',
+            'T/S': 'ts', 'TS': 'ts', 'Transshipment': 'ts', 'ts': 'ts',
+            'POD': 'pod', 'pod': 'pod', 'Port of Discharge': 'pod',
+            'Terminal': 'terminal', 'terminal': 'terminal', 'TERMINAL': 'terminal',
+            'Status': 'status', 'status': 'status', 'STATUS': 'status',
+            'All': 'qntAll', 'ALL': 'qntAll', 'Total': 'qntAll', 'qntAll': 'qntAll', 'qnt. ALL': 'qntAll',
+            'US': 'qntUS', 'qntUS': 'qntUS', 'qnt. US': 'qntUS',
+            'Canada': 'qntCan', 'CAN': 'qntCan', 'qntCan': 'qntCan', 'qnt. Can.': 'qntCan'
+        };
+
+        // ============================================================
+        // ② DATA (current snapshot — replaced on refresh)
+        // ============================================================
+        var D = [{ sl: "MSC", vessel: "MED AYDIN DC529A", qntAll: 34, eta: "2025-07-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 31, qntCan: 3 }, { sl: "MSC", vessel: "MSC ELBE III DC529A", qntAll: 72, eta: "2025-07-27", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 72, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI528A", qntAll: 128, eta: "2025-07-28", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 126, qntCan: 2 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD530A", qntAll: 57, eta: "2025-07-29", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 52, qntCan: 5 }, { sl: "MSC", vessel: "BF TROUT 530E", qntAll: 4, eta: "2025-08-07", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "MSC", vessel: "MED AYDIN DC531A", qntAll: 148, eta: "2025-08-04", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 143, qntCan: 5 }, { sl: "MSC", vessel: "MSC LEVANTE F YU528R", qntAll: 37, eta: "2025-08-05", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 37, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR XA530A", qntAll: 21, eta: "2025-08-05", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 21, qntCan: 0 }, { sl: "MSC", vessel: "LEYLA KALKAVAN 531E", qntAll: 4, eta: "2025-08-06", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "MSC", vessel: "TOMRIZ A TPS02825", qntAll: 3, eta: "2025-08-07", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 3, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC530A", qntAll: 19, eta: "2025-08-09", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 18, qntCan: 1 }, { sl: "Maersk", vessel: "PROS HOPE 531S", qntAll: 6, eta: "2025-08-09", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 6, qntCan: 0 }, { sl: "Maersk", vessel: "ELBSAILOR 531E", qntAll: 11, eta: "2025-08-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 9, qntCan: 2 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI531A", qntAll: 37, eta: "2025-08-12", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 34, qntCan: 3 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD532A", qntAll: 67, eta: "2025-08-10", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 48, qntCan: 19 }, { sl: "MSC", vessel: "MSC CLAUDIA YU529R", qntAll: 54, eta: "2025-08-14", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 54, qntCan: 0 }, { sl: "Maersk", vessel: "WYBELSUM 532E", qntAll: 10, eta: "2025-08-19", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MED AYDIN DC532A", qntAll: 156, eta: "2025-08-16", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 143, qntCan: 13 }, { sl: "MSC", vessel: "MSC AMANDA F YU530R", qntAll: 58, eta: "2025-08-17", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 58, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DH532A", qntAll: 31, eta: "2025-08-19", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 31, qntCan: 0 }, { sl: "MSC", vessel: "MSC LEVANTE F XA532A", qntAll: 113, eta: "2025-08-20", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 109, qntCan: 4 }, { sl: "MSC", vessel: "MSC VULCANO II YU531R", qntAll: 36, eta: "2025-08-20", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 36, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI532A", qntAll: 60, eta: "2025-08-24", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 60, qntCan: 0 }, { sl: "MSC", vessel: "MSC AYSE NAZ DI532R", qntAll: 50, eta: "2025-08-24", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 50, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD533A", qntAll: 64, eta: "2025-08-25", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 58, qntCan: 6 }, { sl: "MSC", vessel: "MED AYDIN DC533A", qntAll: 107, eta: "2025-08-29", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 104, qntCan: 3 }, { sl: "MSC", vessel: "MSC LEVANTE F XA533A", qntAll: 111, eta: "2025-08-30", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 107, qntCan: 4 }, { sl: "MSC", vessel: "MSC ELBE III DC535A", qntAll: 99, eta: "2025-09-04", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 97, qntCan: 2 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD535A", qntAll: 13, eta: "2025-09-05", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 13, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI535A", qntAll: 110, eta: "2025-09-06", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 93, qntCan: 17 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DH535A", qntAll: 5, eta: "2025-09-05", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "MSC LENA F YU533R", qntAll: 19, eta: "2025-09-08", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 19, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 536E", qntAll: 1, eta: "2025-09-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 0, qntCan: 1 }, { sl: "ZIM", vessel: "CLAIRE A 216N", qntAll: 10, eta: "2025-09-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MED AYDIN DC536A", qntAll: 65, eta: "2025-09-13", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 55, qntCan: 10 }, { sl: "ZIM", vessel: "TOMRIZ A 373S", qntAll: 10, eta: "2025-09-16", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MSC AZURIT F YU535R", qntAll: 108, eta: "2025-09-20", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 108, qntCan: 0 }, { sl: "CMA", vessel: "BF TROUT 0ULAAS1MA", qntAll: 3, eta: "2025-09-20", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 3, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD536A", qntAll: 6, eta: "2025-09-21", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 6, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC537A", qntAll: 45, eta: "2025-09-22", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 45, qntCan: 0 }, { sl: "CMA", vessel: "WYBELSUM 0ULACS1MA", qntAll: 3, eta: "2025-09-22", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 3, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 217N", qntAll: 10, eta: "2025-09-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MSC LENA F YU536R", qntAll: 29, eta: "2025-09-26", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 29, qntCan: 0 }, { sl: "Sealead", vessel: "SKY LIGHT 25003", qntAll: 2, eta: "2025-09-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 2, qntCan: 0 }, { sl: "ZIM", vessel: "TOMRIZ A 374S", qntAll: 10, eta: "2025-09-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DH539A", qntAll: 77, eta: "2025-09-28", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 77, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELEONORA III AC537B", qntAll: 63, eta: "2025-10-02", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 63, qntCan: 0 }, { sl: "MSC", vessel: "MED DENIZLI YU537R", qntAll: 42, eta: "2025-10-02", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 42, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD539A", qntAll: 4, eta: "2025-10-04", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "CMA", vessel: "BF TROUT 0ULAES1MA", qntAll: 6, eta: "2025-10-02", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 6, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 540E", qntAll: 60, eta: "2025-10-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 60, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 218N", qntAll: 55, eta: "2025-10-08", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 55, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC540A", qntAll: 47, eta: "2025-10-13", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 47, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 541E", qntAll: 1, eta: "2025-10-09", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 1, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI539A", qntAll: 71, eta: "2025-10-09", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 70, qntCan: 1 }, { sl: "MSC", vessel: "MED DENIZLI DC541A", qntAll: 152, eta: "2025-10-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 152, qntCan: 0 }, { sl: "MSC", vessel: "MSC AZURIT F YU538R", qntAll: 17, eta: "2025-10-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 17, qntCan: 0 }, { sl: "CMA", vessel: "BF TROUT 0ULAIS1MA", qntAll: 17, eta: "2025-10-13", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 17, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELEONORA III XA542A", qntAll: 35, eta: "2025-10-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 28, qntCan: 7 }, { sl: "Maersk", vessel: "COLOMBO TRADER 541E", qntAll: 4, eta: "2025-10-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 219N", qntAll: 32, eta: "2025-10-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 32, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC542A", qntAll: 39, eta: "2025-10-18", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 39, qntCan: 0 }, { sl: "MSC", vessel: "MSC AMANDA F YU539R", qntAll: 11, eta: "2025-10-17", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 11, qntCan: 0 }, { sl: "CMA", vessel: "WYBELSUM 0ULAKS1MA", qntAll: 25, eta: "2025-10-17", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 25, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD541A", qntAll: 57, eta: "2025-10-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 57, qntCan: 0 }, { sl: "MSC", vessel: "MED DENIZLI DH542A", qntAll: 27, eta: "2025-10-23", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 27, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI541A", qntAll: 4, eta: "2025-10-23", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "CMA", vessel: "BF TROUT 0ULAMS1MA", qntAll: 5, eta: "2025-10-23", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "MSC POTOMAC F XA540A", qntAll: 48, eta: "2025-10-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 39, qntCan: 9 }, { sl: "MSC", vessel: "MSC ELBE III DC542A", qntAll: 124, eta: "2025-10-23", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 106, qntCan: 18 }, { sl: "Maersk", vessel: "WYBELSUM 543S", qntAll: 5, eta: "2025-10-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 220N", qntAll: 66, eta: "2025-10-27", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 66, qntCan: 0 }, { sl: "MSC", vessel: "MSC SAGITTARIUS F YU540R", qntAll: 8, eta: "2025-10-29", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 8, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 543E", qntAll: 34, eta: "2025-10-31", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 34, qntCan: 0 }, { sl: "MSC", vessel: "MSC AZURIT F YU541R", qntAll: 37, eta: "2025-11-01", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 37, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD543A", qntAll: 54, eta: "2025-11-01", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 49, qntCan: 5 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI543A", qntAll: 49, eta: "2025-11-02", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 49, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC544A", qntAll: 27, eta: "2025-11-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 23, qntCan: 4 }, { sl: "CMA", vessel: "STEEN 0ULS9S1MA", qntAll: 10, eta: "2025-11-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MED DENIZLI DH544A", qntAll: 93, eta: "2025-11-04", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 93, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 544E", qntAll: 32, eta: "2025-11-07", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 32, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC544A", qntAll: 54, eta: "2025-11-08", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 54, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD544A", qntAll: 5, eta: "2025-11-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 4, qntCan: 1 }, { sl: "MSC", vessel: "MSC POTOMAC F YU542R", qntAll: 76, eta: "2025-11-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 76, qntCan: 0 }, { sl: "Maersk", vessel: "MEDKON MIRA 545E", qntAll: 35, eta: "2025-11-12", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 35, qntCan: 0 }, { sl: "ZIM", vessel: "CORELLI 891W", qntAll: 29, eta: "2025-11-12", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 29, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 545E", qntAll: 30, eta: "2025-11-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 30, qntCan: 0 }, { sl: "MSC", vessel: "LA GALITE XA545A", qntAll: 9, eta: "2025-11-12", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 9, qntCan: 0 }, { sl: "MSC", vessel: "MSC PROSPERITY II YU543R", qntAll: 76, eta: "2025-11-15", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 76, qntCan: 0 }, { sl: "MSC", vessel: "MSC NINA F DC546A", qntAll: 26, eta: "2025-11-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 22, qntCan: 4 }, { sl: "MSC", vessel: "MSC ELBE III DC545A", qntAll: 76, eta: "2025-11-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 74, qntCan: 2 }, { sl: "MSC", vessel: "MSC PORTO III XA545A", qntAll: 95, eta: "2025-11-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 93, qntCan: 2 }, { sl: "CMA", vessel: "STEEN 0ULAUS1MA", qntAll: 15, eta: "2025-11-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MED DENIZLI DH546A", qntAll: 59, eta: "2025-11-16", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 59, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD546A", qntAll: 39, eta: "2025-11-22", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 39, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI546A", qntAll: 19, eta: "2025-11-24", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 16, qntCan: 3 }, { sl: "MSC", vessel: "MSC LEVANTE F YU544R", qntAll: 15, eta: "2025-11-24", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MSC SAGITTARIUS F YU545R", qntAll: 21, eta: "2025-11-28", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 21, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 547E", qntAll: 16, eta: "2025-11-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 1 }, { sl: "MSC", vessel: "MED DENIZLI DH547R", qntAll: 20, eta: "2025-11-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 20, qntCan: 0 }, { sl: "Cosco", vessel: "STEEN 067", qntAll: 15, eta: "2025-11-27", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC548A", qntAll: 127, eta: "2025-11-29", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 115, qntCan: 12 }, { sl: "CMA", vessel: "STEEN 0ULAYS1MA", qntAll: 10, eta: "2025-11-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "ARKAS", vessel: "ROZA A TPS049S25", qntAll: 2, eta: "2025-11-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 2, qntCan: 0 }, { sl: "CMA", vessel: "MEDKON ANA 0KKSGS1MA", qntAll: 5, eta: "2025-11-30", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI548A", qntAll: 49, eta: "2025-12-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 49, qntCan: 0 }, { sl: "Cosco", vessel: "CMA CGM BLOSSOM 009", qntAll: 24, eta: "2025-12-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 24, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD548A", qntAll: 23, eta: "2025-12-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 23, qntCan: 0 }, { sl: "MSC", vessel: "MSC AMANDA F YU546R", qntAll: 13, eta: "2025-12-06", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 13, qntCan: 0 }, { sl: "MSC", vessel: "MSC BAHRAIN II DK549A", qntAll: 78, eta: "2025-12-08", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 67, qntCan: 11 }, { sl: "Maersk", vessel: "YM INVENTIVE 549N", qntAll: 54, eta: "2025-12-06", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 54, qntCan: 0 }, { sl: "Cosco", vessel: "STEEN 068", qntAll: 25, eta: "2025-12-08", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 25, qntCan: 0 }, { sl: "MSC", vessel: "MSC GAETA II XA550A", qntAll: 27, eta: "2025-12-11", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 8, qntCan: 19 }, { sl: "MSC", vessel: "MSC ELBE III DC549A", qntAll: 141, eta: "2025-12-11", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 132, qntCan: 9 }, { sl: "MSC", vessel: "MED DENIZLI DH548A", qntAll: 29, eta: "2025-12-10", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 29, qntCan: 0 }, { sl: "MSC", vessel: "MSC LEVANTE F YU547R", qntAll: 49, eta: "2025-12-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 49, qntCan: 0 }, { sl: "Maersk", vessel: "MEDKON MIRA 550E", qntAll: 50, eta: "2025-12-13", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 50, qntCan: 0 }, { sl: "Maersk", vessel: "CMA CGM BLOSSOM 550E", qntAll: 5, eta: "2025-12-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "Cosco", vessel: "CMA CGM BLOSSOM 010", qntAll: 5, eta: "2025-12-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "MSC PORTO III DK550A", qntAll: 170, eta: "2025-12-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 154, qntCan: 16 }, { sl: "ZIM", vessel: "CORELLI 893W", qntAll: 15, eta: "2025-12-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 549E", qntAll: 1, eta: "2025-12-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 1, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD549A", qntAll: 59, eta: "2025-12-17", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 59, qntCan: 0 }, { sl: "MSC", vessel: "MSC IZMIR F YU548R", qntAll: 32, eta: "2025-12-20", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 32, qntCan: 0 }, { sl: "Maersk", vessel: "MEDKON MIRA 551E", qntAll: 35, eta: "2025-12-24", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 35, qntCan: 0 }, { sl: "MSC", vessel: "MED DENIZLI DH551A", qntAll: 2, eta: "2025-12-23", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 1, qntCan: 1 }, { sl: "CMA", vessel: "STEEN 0ULB6S1MA", qntAll: 10, eta: "2025-12-22", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR YU549R", qntAll: 15, eta: "2025-12-25", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC551A", qntAll: 3, eta: "2025-12-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 3, qntCan: 0 }, { sl: "MSC", vessel: "MSC MANON DR552A", qntAll: 4, eta: "2025-12-26", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 551E", qntAll: 5, eta: "2025-12-27", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD551A", qntAll: 5, eta: "2025-12-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "Maersk", vessel: "CMA CGM BLOSSOM 551E", qntAll: 29, eta: "2025-12-28", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 29, qntCan: 0 }, { sl: "MSC", vessel: "MSC GAETA II DK551R", qntAll: 27, eta: "2025-12-30", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 25, qntCan: 2 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI552A", qntAll: 34, eta: "2025-12-30", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 34, qntCan: 0 }, { sl: "Cosco", vessel: "STEEN 070", qntAll: 15, eta: "2026-01-02", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 223S", qntAll: 34, eta: "2026-01-02", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 34, qntCan: 0 }, { sl: "MSC", vessel: "MSC DELHI II DK601A", qntAll: 80, eta: "2026-01-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 80, qntCan: 0 }, { sl: "Maersk", vessel: "MEDKON MIRA 552E", qntAll: 25, eta: "2026-01-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 25, qntCan: 0 }, { sl: "MSC", vessel: "MSC IZMIR F YU550R", qntAll: 4, eta: "2026-01-09", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 4, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC601A", qntAll: 23, eta: "2026-01-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 23, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 601E", qntAll: 5, eta: "2026-01-12", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC602A", qntAll: 92, eta: "2026-01-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 92, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD601A", qntAll: 1, eta: "2026-01-13", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 1, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 602E", qntAll: 2, eta: "2026-01-16", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 2, qntCan: 0 }, { sl: "MSC", vessel: "MED DENIZLI DH601A", qntAll: 7, eta: "2026-01-16", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 6, qntCan: 1 }, { sl: "Cosco", vessel: "CMA CGM BLOSSOM 012", qntAll: 10, eta: "2026-01-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "ZIM", vessel: "ROZA A 886S", qntAll: 24, eta: "2026-01-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 24, qntCan: 0 }, { sl: "MSC", vessel: "MSC GAETA II DK603A", qntAll: 22, eta: "2026-01-19", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 19, qntCan: 3 }, { sl: "MSC", vessel: "MSC DELHI II XA603A", qntAll: 89, eta: "2026-01-21", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 89, qntCan: 0 }, { sl: "Maersk", vessel: "MEDKON MIRA 601E", qntAll: 10, eta: "2026-01-19", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 224S", qntAll: 30, eta: "2026-01-21", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 30, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC602A", qntAll: 61, eta: "2026-01-22", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 61, qntCan: 0 }, { sl: "Maersk", vessel: "STEEN 604E", qntAll: 15, eta: "2026-01-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MSC AMIHAN F XA604A", qntAll: 14, eta: "2026-01-23", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 11, qntCan: 3 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD603A", qntAll: 17, eta: "2026-01-27", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 17, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI604A", qntAll: 29, eta: "2026-01-27", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 29, qntCan: 0 }, { sl: "Maersk", vessel: "CMA CGM BLOSSOM 604E", qntAll: 5, eta: "2026-01-29", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 603E", qntAll: 17, eta: "2026-01-27", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 17, qntCan: 0 }, { sl: "MSC", vessel: "MSC ALIX 3 YU601R", qntAll: 38, eta: "2026-01-29", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 34, qntCan: 4 }, { sl: "Cosco", vessel: "STEEN 071", qntAll: 15, eta: "2026-01-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MSC ALIX 3 B", qntAll: 80, eta: "2026-01-28", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 80, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC603A", qntAll: 85, eta: "2026-01-28", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 85, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 604E", qntAll: 7, eta: "2026-01-30", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 7, qntCan: 0 }, { sl: "MSC", vessel: "MSC KATALIN II DK604A", qntAll: 103, eta: "2026-01-31", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 102, qntCan: 1 }, { sl: "CMA", vessel: "CMA CGM BLOSSOM 0ULBGS", qntAll: 20, eta: "2026-01-29", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 20, qntCan: 0 }, { sl: "Maersk", vessel: "MEDKON MIRA 602E", qntAll: 5, eta: "2026-02-03", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 225S", qntAll: 80, eta: "2026-02-05", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 80, qntCan: 0 }, { sl: "MSC", vessel: "MSC SAGITTARIUS F YU602R", qntAll: 24, eta: "2026-02-05", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 24, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC603A", qntAll: 2, eta: "2026-02-09", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 1, qntCan: 1 }, { sl: "Cosco", vessel: "STEEN 072", qntAll: 10, eta: "2026-02-06", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "Cosco", vessel: "CMA CGM BLOSSOM 014", qntAll: 12, eta: "2026-02-08", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 12, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 605E", qntAll: 10, eta: "2026-02-09", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "GOZDE BAYRAKTAR DD605A", qntAll: 13, eta: "2026-02-11", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 13, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI605A", qntAll: 77, eta: "2026-02-10", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 74, qntCan: 3 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC605A", qntAll: 7, eta: "2026-02-09", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 7, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 226S", qntAll: 15, eta: "2026-02-12", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 15, qntCan: 0 }, { sl: "MSC", vessel: "MSC AMIHAN F YU603R", qntAll: 72, eta: "2026-02-11", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 72, qntCan: 0 }, { sl: "MSC", vessel: "MED CERKEZKOY DH607A", qntAll: 12, eta: "2026-02-12", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 12, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 606E", qntAll: 19, eta: "2026-02-12", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 19, qntCan: 0 }, { sl: "MSC", vessel: "MSC VULCANO II DK606A", qntAll: 81, eta: "2026-02-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 73, qntCan: 8 }, { sl: "Maersk", vessel: "PROS HOPE 607E", qntAll: 13, eta: "2026-02-14", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 13, qntCan: 0 }, { sl: "MSC", vessel: "BILBAO TRADER DC606A", qntAll: 11, eta: "2026-02-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 6, qntCan: 5 }, { sl: "MSC", vessel: "MSC KATALIN II DK607A", qntAll: 16, eta: "2026-02-18", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 16, qntCan: 0 }, { sl: "MSC", vessel: "MSC IRA II YU604R", qntAll: 340, eta: "2026-02-19", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 340, qntCan: 0 }, { sl: "Maersk", vessel: "CMA CGM BLOSSOM 606E", qntAll: 5, eta: "2026-02-15", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "MSC NINA F DK608A", qntAll: 5, eta: "2026-02-21", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 4, qntCan: 1 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC606A", qntAll: 11, eta: "2026-02-19", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 11, qntCan: 0 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI607A", qntAll: 8, eta: "2026-02-22", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 8, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 227S", qntAll: 10, eta: "2026-02-23", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 10, qntCan: 0 }, { sl: "Maersk", vessel: "BF TROUT 608E", qntAll: 9, eta: "2026-02-26", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 9, qntCan: 0 }, { sl: "MSC", vessel: "MSC AMIHAN F YU606R", qntAll: 25, eta: "2026-02-26", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 25, qntCan: 0 }, { sl: "Cosco", vessel: "CMA CGM BLOSSOM 015", qntAll: 20, eta: "2026-02-25", ts: "", pod: "POTI", terminal: "", status: "", qntUS: 20, qntCan: 0 }, { sl: "MSC", vessel: "MSC BAHRAIN II YU605R", qntAll: 236, eta: "2026-02-28", ts: "", pod: "BATUMI", terminal: "", status: "", qntUS: 236, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 608E", qntAll: 3, eta: "2026-03-01", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 3, qntCan: 0 }, { sl: "MSC", vessel: "BILBAO TRADER DK609A", qntAll: 79, eta: "2026-03-02", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 77, qntCan: 2 }, { sl: "ZIM", vessel: "CLAIRE A 228S", qntAll: 10, eta: "2026-03-08", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 10, qntCan: 0 }, { sl: "Cosco", vessel: "STEEN 074", qntAll: 49, eta: "2026-03-03", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 49, qntCan: 0 }, { sl: "Hapag", vessel: "ROZA A BSX006", qntAll: 20, eta: "2026-03-08", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 20, qntCan: 0 }, { sl: "MSC", vessel: "MSC ABIGAIL F YU607R", qntAll: 26, eta: "2026-03-08", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 26, qntCan: 0 }, { sl: "MSC", vessel: "MSC ALIX 3 DK608A", qntAll: 19, eta: "2026-03-09", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 10, qntCan: 9 }, { sl: "MSC", vessel: "MSC RUTH F DK609A", qntAll: 41, eta: "2026-03-10", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 40, qntCan: 1 }, { sl: "MSC", vessel: "MSC TIAN III DK610A", qntAll: 57, eta: "2026-03-12", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 50, qntCan: 7 }, { sl: "ZIM", vessel: "ALEXANDRA A 22S", qntAll: 85, eta: "2026-03-15", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 85, qntCan: 0 }, { sl: "Maersk", vessel: "STEEN 610E", qntAll: 3, eta: "2026-03-14", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 3, qntCan: 0 }, { sl: "MSC", vessel: "MED CORLU DH610A", qntAll: 4, eta: "2026-03-18", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 1, qntCan: 3 }, { sl: "Cosco", vessel: "STEEN 010", qntAll: 25, eta: "2026-03-19", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 25, qntCan: 0 }, { sl: "CMA", vessel: "STEEN 0ULBUS1MA", qntAll: 10, eta: "2026-03-19", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MSC BAHRAIN II YU608R", qntAll: 25, eta: "2026-03-19", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 25, qntCan: 0 }, { sl: "MSC", vessel: "BILBAO TRADER DC612A", qntAll: 134, eta: "2026-03-20", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 116, qntCan: 18 }, { sl: "MSC", vessel: "MSC DELHI II DK611A", qntAll: 76, eta: "2026-03-22", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 68, qntCan: 8 }, { sl: "MSC", vessel: "MSC ABIGAIL F YU609R", qntAll: 50, eta: "2026-03-23", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 50, qntCan: 0 }, { sl: "Maersk", vessel: "PROS HOPE 610E", qntAll: 20, eta: "2026-03-23", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 20, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC612A", qntAll: 32, eta: "2026-03-24", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 32, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC611A", qntAll: 38, eta: "2026-03-25", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 38, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 612E", qntAll: 1, eta: "2026-03-27", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 1, qntCan: 0 }, { sl: "Cosco", vessel: "BLOSSOM 009", qntAll: 32, eta: "2026-03-29", ts: "", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 32, qntCan: 0 }, { sl: "MSC", vessel: "BILBAO TRADER 613A", qntAll: 68, eta: "2026-03-29", ts: "", pod: "BATUMI", terminal: "", status: "At Final Port", qntUS: 52, qntCan: 16 }, { sl: "MSC", vessel: "MSC PROSPERITY II DK612A", qntAll: 106, eta: "2026-03-30", ts: "", pod: "POTI", terminal: "", status: "At Final Port", qntUS: 100, qntCan: 6 }, { sl: "Hapag", vessel: "CLAIRE A TPS 009", qntAll: 20, eta: "2026-03-30", ts: "", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 20, qntCan: 0 }, { sl: "Hapag", vessel: "ALEXANDRA A SPT010", qntAll: 14, eta: "2026-03-30", ts: "", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 14, qntCan: 0 }, { sl: "MSC", vessel: "POTOMAC 610R", qntAll: 80, eta: "2026-04-02", ts: "Gioia Tauro", pod: "BATUMI", terminal: "BICT", status: "At Final Port", qntUS: 80, qntCan: 0 }, { sl: "MSC", vessel: "MSC DELHI II DK613A", qntAll: 73, eta: "2026-04-04", ts: "Tekirdag", pod: "POTI", terminal: "PPT", status: "At Final Port", qntUS: 61, qntCan: 12 }, { sl: "Maersk", vessel: "PROS HOPE 611E", qntAll: 7, eta: "2026-04-06", ts: "Istanbul", pod: "POTI", terminal: "PPT", status: "At Final Port", qntUS: 7, qntCan: 0 }, { sl: "MSC", vessel: "MSC SAGITTARIUS F DK613A", qntAll: 20, eta: "2026-04-06", ts: "Gioia Tauro", pod: "POTI", terminal: "PPT", status: "At Final Port", qntUS: 4, qntCan: 16 }, { sl: "MSC", vessel: "AYSE NAZ BAYRAKTAR DI613A", qntAll: 58, eta: "2026-04-06", ts: "Tekirdag", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 58, qntCan: 0 }, { sl: "MSC", vessel: "MED CESME DD612A", qntAll: 33, eta: "2026-04-07", ts: "Tekirdag", pod: "BATUMI", terminal: "BICT", status: "At Final Port", qntUS: 33, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 613E", qntAll: 3, eta: "2026-04-03", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "At Final Port", qntUS: 3, qntCan: 0 }, { sl: "ZIM", vessel: "ROZA A 890W", qntAll: 5, eta: "2026-04-05", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "At Final Port", qntUS: 5, qntCan: 0 }, { sl: "Maersk", vessel: "LEYLA KALKAVAN 613E", qntAll: 30, eta: "2026-04-08", ts: "Istanbul", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 30, qntCan: 0 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR DC614A", qntAll: 23, eta: "2026-04-09", ts: "Tekirdag", pod: "BATUMI", terminal: "BICT", status: "At Final Port", qntUS: 18, qntCan: 5 }, { sl: "Maersk", vessel: "MEDKON MIRA 613N", qntAll: 10, eta: "2026-04-09", ts: "Istanbul", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 10, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC613A", qntAll: 8, eta: "2026-04-11", ts: "Tekirdag", pod: "POTI", terminal: "PPT", status: "At Final Port", qntUS: 8, qntCan: 0 }, { sl: "MSC", vessel: "MSC ABIGAIL F YU611R", qntAll: 26, eta: "2026-04-11", ts: "Gioia Tauro", pod: "BATUMI", terminal: "BICT", status: "At Final Port", qntUS: 26, qntCan: 0 }, { sl: "ZIM", vessel: "CLAIRE A 231S", qntAll: 20, eta: "2026-04-13", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "At Final Port", qntUS: 20, qntCan: 0 }, { sl: "CMA", vessel: "STEEN 0ULBYS1MA", qntAll: 13, eta: "2026-04-14", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "At Final Port", qntUS: 13, qntCan: 0 }, { sl: "Cosco", vessel: "CMA CGM BLOSSOM 018", qntAll: 25, eta: "2026-04-16", ts: "Istanbul", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 25, qntCan: 0 }, { sl: "MSC", vessel: "MSC ALIX 3 DK615A", qntAll: 63, eta: "2026-04-15", ts: "Gioia Tauro", pod: "POTI", terminal: "Esperansi", status: "At Final Port", qntUS: 63, qntCan: 0 }, { sl: "MSC", vessel: "MSC PROSPERITY II DK612B", qntAll: 22, eta: "2026-04-16", ts: "Abu Kir", pod: "POTI", terminal: "PPT", status: "At Final Port", qntUS: 22, qntCan: 0 }, { sl: "MSC", vessel: "BILBAO TRADER YU613R", qntAll: 22, eta: "2026-04-17", ts: "Gioia Tauro", pod: "BATUMI", terminal: "BICT", status: "At Final Port", qntUS: 22, qntCan: 0 }, { sl: "MSC", vessel: "MED CORLU DH615A", qntAll: 19, eta: "2026-04-17", ts: "Tekirdag", pod: "POTI", terminal: "PPT", status: "At Final Port", qntUS: 19, qntCan: 0 }, { sl: "CMA", vessel: "MEDKON SIA 0KK4WS1MA", qntAll: 15, eta: "2026-04-21", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "At Final Port", qntUS: 15, qntCan: 0 }, { sl: "ZIM", vessel: "YM Inventive 359S", qntAll: 5, eta: "2026-04-20", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "On Raid", qntUS: 5, qntCan: 0 }, { sl: "Hapag", vessel: "YM INVENTIVE TPS 616", qntAll: 5, eta: "2026-04-20", ts: "Istanbul", pod: "POTI", terminal: "Esperansi", status: "On Raid", qntUS: 5, qntCan: 0 }, { sl: "MSC", vessel: "MSC ELBE III DC616A", qntAll: 119, eta: "2026-04-21", ts: "Tekirdag", pod: "POTI", terminal: "Esperansi", status: "En Route", qntUS: 116, qntCan: 3 }, { sl: "MSC", vessel: "BURAK BAYRAKTAR 615A", qntAll: 4, eta: "2026-04-22", ts: "Tekirdag", pod: "BATUMI", terminal: "BICT", status: "En Route", qntUS: 4, qntCan: 0 }, { sl: "MSC", vessel: "MSC HOGGAR DK616A", qntAll: 37, eta: "2026-04-24", ts: "Gioia Tauro", pod: "POTI", terminal: "PPT", status: "En Route", qntUS: 37, qntCan: 0 }, { sl: "Cosco", vessel: "STEEN 077", qntAll: 15, eta: "2026-04-23", ts: "Istanbul", pod: "POTI", terminal: "Esperansi", status: "En Route", qntUS: 15, qntCan: 0 }, { sl: "CMA", vessel: "STEEN 0ULC2S1MA", qntAll: 20, eta: "2026-04-23", ts: "Istanbul", pod: "POTI", terminal: "APM", status: "En Route", qntUS: 20, qntCan: 0 }, { sl: "Maersk", vessel: "COLOMBO TRADER 617E", qntAll: 12, eta: "2026-04-25", ts: "Istanbul", pod: "POTI", terminal: "PPT", status: "En Route", qntUS: 12, qntCan: 0 }];
+
+        // ============================================================
+        // ③ CHART INSTANCES & STATE
+        // ============================================================
+        var MK = ["2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04"];
+        var ML = ["Jul 25", "Aug 25", "Sep 25", "Oct 25", "Nov 25", "Dec 25", "Jan 26", "Feb 26", "Mar 26", "Apr 26"];
+        var AM = new Set(), SC = "eta", SA = true, MD = [];
+        var cSL, cPOD, cMON, cTS, cVESSEL, cTERM, cTERMD;
+
+        // ============================================================
+        // ④ HELPERS
+        // ============================================================
+        function mkey(e) { var d = new Date(e); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") }
+        function fmtDate(e) { return new Date(e).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit" }) }
+        function stBadge(s) {
+            if (s === "At Final Port") return "<span class='st-fp'>At Port</span>";
+            if (s === "En Route") return "<span class='st-er'>En Route</span>";
+            if (s === "On Raid") return "<span class='st-or'>On Raid</span>";
+            return s ? "<span>" + s + "</span>" : "-";
+        }
+        function showToast(msg, type) {
+            var t = document.getElementById("toast");
+            t.textContent = msg; t.className = "show " + (type || "ok");
+            setTimeout(function () { t.className = "" }, 3500);
+        }
+
+        // ============================================================
+        // ⑤ FILTER
+        // ============================================================
+        function getFiltered() {
+            if (AM.size > 0) return D.filter(function (v) { return AM.has(mkey(v.eta)) && v.qntAll > 0 });
+            var r = document.querySelector(".pb.on");
+            var ranges = { all: ["2025-07-01", "2026-04-30"], q3: ["2025-07-01", "2025-09-30"], q4: ["2025-10-01", "2025-12-31"], q1: ["2026-01-01", "2026-03-31"], q2: ["2026-04-01", "2026-06-30"] };
+            var rng = r ? ranges[r.getAttribute("data-r")] : ranges.all;
+            var s = new Date(rng[0]).getTime(), e = new Date(rng[1]).getTime();
+            return D.filter(function (v) { var t = new Date(v.eta).getTime(); return t >= s && t <= e && v.qntAll > 0 });
+        }
+
+        // ============================================================
+        // ⑥ MAIN UPDATE
+        // ============================================================
+        function update() {
+            var fd = getFiltered();
+            document.getElementById("kv").textContent = fd.length.toLocaleString();
+            document.getElementById("kt").textContent = fd.reduce(function (a, v) { return a + v.qntAll }, 0).toLocaleString();
+            document.getElementById("ku").textContent = fd.reduce(function (a, v) { return a + v.qntUS }, 0).toLocaleString();
+            document.getElementById("kc").textContent = fd.reduce(function (a, v) { return a + v.qntCan }, 0).toLocaleString();
+            document.getElementById("kts").textContent = fd.filter(function (v) { return v.ts !== "" }).length.toLocaleString();
+            var lbl = AM.size > 0
+                ? Array.from(AM).sort()[0].replace("-", " ").toUpperCase() + " — <span>" + Array.from(AM).sort().pop().replace("-", " ").toUpperCase() + "</span>"
+                : "ALL VESSELS — <span>" + fd.length + " SAILINGS</span>";
+            document.getElementById("pd").innerHTML = lbl;
+            updSL(fd); updPOD(fd); updMON(fd); updTS(fd); updTB(fd); updStatus(fd); updCanTable(fd); updVessel(fd); updTerminal(fd);
+            MD = fd.slice(); renderTable();
+        }
+
+        // ============================================================
+        // ⑦ CHART UPDATERS
+        // ============================================================
+        function updSL(fd) {
+            var m = {};
+            fd.forEach(function (v) { if (!m[v.sl]) m[v.sl] = { u: 0, c: 0, t: 0 }; m[v.sl].u += v.qntUS; m[v.sl].c += v.qntCan; m[v.sl].t += v.qntAll });
+            var a = Object.keys(m).map(function (k) { return { sl: k, u: m[k].u, c: m[k].c, t: m[k].t } }).sort(function (a, b) { return b.t - a.t });
+            var top = a.slice(0, 6), rest = a.slice(6);
+            cSL.data.labels = top.map(function (x) { return x.sl });
+            cSL.data.datasets[0].data = top.map(function (x) { return x.u });
+            cSL.data.datasets[1].data = top.map(function (x) { return x.c });
+            cSL.update();
+            document.getElementById("sl-o").innerHTML = rest.length ? "<strong>Other:</strong> " + rest.map(function (x) { return x.sl + ": " + x.t }).join(" · ") : "";
+        }
+
+        function updPOD(fd) {
+            var p = fd.filter(function (v) { return v.pod === "POTI" }).reduce(function (a, v) { return a + v.qntAll }, 0);
+            var b = fd.filter(function (v) { return v.pod === "BATUMI" }).reduce(function (a, v) { return a + v.qntAll }, 0);
+            cPOD.data.datasets[0].data = [p, b]; cPOD.update();
+            var tot = p + b;
+            document.getElementById("pod-pct").textContent = tot > 0 ? Math.round(p / tot * 100) + "%" : "—";
+        }
+
+        function updMON(fd) {
+            var m = {}; MK.forEach(function (k) { m[k] = 0 });
+            fd.forEach(function (v) { var k = mkey(v.eta); if (m[k] !== undefined) m[k] += v.qntAll });
+            cMON.data.datasets[0].data = MK.map(function (k) { return m[k] || 0 }); cMON.update();
+        }
+
+        function updTS(fd) {
+            var m = {};
+            fd.filter(function (v) { return v.ts !== "" }).forEach(function (v) { if (!m[v.ts]) m[v.ts] = 0; m[v.ts] += v.qntAll });
+            var a = Object.keys(m).map(function (k) { return { p: k, t: m[k] } }).sort(function (a, b) { return b.t - a.t });
+            cTS.data.labels = a.map(function (x) { return x.p });
+            cTS.data.datasets[0].data = a.map(function (x) { return x.t }); cTS.update();
+        }
+
+        function updTB(fd) {
+            var known = ["PPT", "Esperansi", "BICT", "APM"];
+            var m = {};
+            fd.forEach(function (v) { var t = v.terminal || "(none)"; if (!m[t]) m[t] = { v: 0, c: 0 }; m[t].v++; m[t].c += v.qntAll });
+            var order = known.filter(function (t) { return m[t] });
+            Object.keys(m).forEach(function (t) { if (known.indexOf(t) === -1) order.push(t) });
+            var mx = Math.max.apply(null, order.map(function (t) { return m[t] ? m[t].v : 0 }));
+            document.getElementById("tb").innerHTML = order.map(function (t) {
+                var d = m[t] || { v: 0, c: 0 }; var pct = mx > 0 ? Math.round(d.v / mx * 100) : 0;
+                return '<div class="tbr"><div class="tn">' + t + '</div><div class="tbg"><div class="tbf" style="width:' + pct + '%"></div></div><div class="tc">' + d.v + '</div><div class="tcc">' + d.c.toLocaleString() + " ctrs</div></div>";
+            }).join("");
+        }
+
+        function updStatus(fd) {
+            var fp = fd.filter(function (v) { return v.status === "At Final Port" });
+            var er = fd.filter(function (v) { return v.status === "En Route" });
+            var or = fd.filter(function (v) { return v.status === "On Raid" });
+            document.getElementById("sfp").textContent = fp.length;
+            document.getElementById("sfpc").textContent = fp.reduce(function (a, v) { return a + v.qntAll }, 0).toLocaleString() + " containers";
+            document.getElementById("ser").textContent = er.length;
+            document.getElementById("serc").textContent = er.reduce(function (a, v) { return a + v.qntAll }, 0).toLocaleString() + " containers";
+            document.getElementById("sor").textContent = or.length;
+            document.getElementById("sorc").textContent = or.reduce(function (a, v) { return a + v.qntAll }, 0).toLocaleString() + " containers";
+        }
+
+        function updCanTable(fd) {
+            var rows = fd.filter(function (v) { return v.qntCan > 0 }).sort(function (a, b) { return new Date(a.eta) - new Date(b.eta) });
+            document.getElementById("ctb").innerHTML = rows.map(function (v) {
+                return "<tr><td>" + v.vessel + "</td><td><strong>" + v.sl + "</strong></td><td>" + fmtDate(v.eta) + "</td><td><span class='" + (v.pod === "POTI" ? "bp" : "bb") + "'>" + v.pod + "</span></td><td>" + (v.terminal || "—") + "</td><td><span class='bcan'>" + v.qntCan + "</span></td><td>" + stBadge(v.status) + "</td></tr>";
+            }).join("");
+        }
+
+        // NEW: top 20 vessels by container count, stacked US/Canada
+        function updVessel(fd) {
+            var top = fd.slice().sort(function (a, b) { return b.qntAll - a.qntAll }).slice(0, 20).reverse();
+            cVESSEL.data.labels = top.map(function (v) { var n = v.vessel; return n.length > 30 ? n.slice(0, 28) + "…" : n });
+            cVESSEL.data.datasets[0].data = top.map(function (v) { return v.qntUS });
+            cVESSEL.data.datasets[1].data = top.map(function (v) { return v.qntCan });
+            cVESSEL.update();
+        }
+
+        // NEW: containers per terminal breakdown
+        function updTerminal(fd) {
+            var terms = {};
+            fd.forEach(function (v) {
+                var t = v.terminal || "(none)";
+                if (!terms[t]) terms[t] = { u: 0, c: 0 };
+                terms[t].u += v.qntUS; terms[t].c += v.qntCan;
+            });
+            var order = Object.keys(terms).sort(function (a, b) { return (terms[b].u + terms[b].c) - (terms[a].u + terms[a].c) });
+            cTERM.data.labels = order;
+            cTERM.data.datasets[0].data = order.map(function (t) { return terms[t].u });
+            cTERM.data.datasets[1].data = order.map(function (t) { return terms[t].c });
+            cTERM.update();
+            var totals = order.map(function (t) { return terms[t].u + terms[t].c });
+            cTERMD.data.labels = order;
+            cTERMD.data.datasets[0].data = totals;
+            cTERMD.update();
+        }
+
+        // ============================================================
+        // ⑧ MANIFEST TABLE
+        // ============================================================
+        function renderTable() {
+            var q = document.getElementById("si").value.toLowerCase();
+            var rows = MD.filter(function (v) { return !q || (v.vessel + v.sl + v.pod + v.terminal + v.ts + v.status).toLowerCase().includes(q) });
+            rows.sort(function (a, b) {
+                var av = a[SC] || "", bv = b[SC] || "";
+                if (SC === "qntAll" || SC === "qntUS" || SC === "qntCan") return SA ? av - bv : bv - av;
+                return SA ? (av < bv ? -1 : av > bv ? 1 : 0) : (av > bv ? -1 : av < bv ? 1 : 0);
+            });
+            document.getElementById("mtb").innerHTML = rows.map(function (v, i) {
+                return "<tr><td style='color:#777777'>" + (i + 1) + "</td><td><strong>" + v.sl + "</strong></td><td>" + v.vessel + "</td><td>" + fmtDate(v.eta) + "</td><td>" + (v.ts || "—") + "</td><td><span class='" + (v.pod === "POTI" ? "bp" : "bb") + "'>" + v.pod + "</span></td><td>" + (v.terminal || "—") + "</td><td>" + stBadge(v.status) + "</td><td class='nn'>" + v.qntAll + "</td><td class='nn'>" + v.qntUS + "</td><td>" + (v.qntCan > 0 ? "<span class='bcan'>" + v.qntCan + "</span>" : "<span style='color:#aaaaaa'>0</span>") + "</td></tr>";
+            }).join("");
+        }
+
+        // ============================================================
+        // ⑨ CSV PARSER (for Google Sheets publish-to-web URL)
+        // ============================================================
+        function parseCSV(text) {
+            var lines = text.trim().split(/\r?\n/);
+            if (lines.length < 2) return [];
+            var hdrs = parseCSVRow(lines[0]).map(function (h) { return h.trim() });
+            var fields = hdrs.map(function (h) { return COL_MAP[h] || null });
+            var out = [];
+            for (var i = 1; i < lines.length; i++) {
+                var row = parseCSVRow(lines[i]);
+                if (!row.length || row.every(function (c) { return !c.trim() })) continue;
+                var obj = { sl: "", vessel: "", qntAll: 0, eta: "", ts: "", pod: "", terminal: "", status: "", qntUS: 0, qntCan: 0 };
+                fields.forEach(function (f, j) {
+                    if (!f || row[j] === undefined) return;
+                    var v = row[j].trim();
+                    if (f === "qntAll" || f === "qntUS" || f === "qntCan") obj[f] = parseInt(v) || 0;
+                    else obj[f] = v;
+                });
+                if (obj.vessel && obj.qntAll >= 0) out.push(obj);
+            }
+            return out;
+        }
+        function parseCSVRow(line) {
+            var res = [], cur = "", inQ = false;
+            for (var i = 0; i < line.length; i++) {
+                var c = line[i];
+                if (c === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+                else if (c === "," && !inQ) { res.push(cur); cur = ""; }
+                else cur += c;
+            }
+            res.push(cur); return res;
+        }
+
+        // ============================================================
+        // ⑩ GOOGLE SHEETS REFRESH
+        // ============================================================
+        async function refreshData() {
+            if (!SHEET_CSV_URL) {
+                showToast("Set SHEET_CSV_URL in the config first", "err");
+                return;
+            }
+            var btn = document.getElementById("btn-ref");
+            var lbl = btn.querySelector("span");
+            btn.classList.add("loading"); lbl.textContent = "Refreshing…";
+            try {
+                var fetchUrl = SHEET_CSV_URL;
+                if (window.location.protocol === "file:") {
+                    fetchUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(SHEET_CSV_URL);
+                }
+                var resp = await fetch(fetchUrl);
+                if (!resp.ok) throw new Error("HTTP " + resp.status);
+                var text = await resp.text();
+                var parsed = parseCSV(text);
+                if (!parsed.length) throw new Error("No rows parsed — check column headers in COL_MAP");
+                D = parsed;
+                document.getElementById("last-upd").textContent = new Date().toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+                update();
+                showToast("✓ " + parsed.length + " vessels loaded", "ok");
+            } catch (e) {
+                showToast("Refresh failed: " + e.message, "err");
+            } finally {
+                btn.classList.remove("loading"); lbl.textContent = "Refresh from Sheet";
+            }
+        }
+
+        // ============================================================
+        // ⑪ INIT
+        // ============================================================
+        window.onload = function () {
+            Chart.defaults.font.family = "system-ui,-apple-system,sans-serif";
+            Chart.defaults.font.weight = "600";
+            Chart.defaults.font.size = 11;
+            Chart.defaults.color = "#555555";
+            Chart.defaults.animation = false;
+
+            var gridColor = "#f5f5f5";
+            var axisColor = "#777777";
+            var textDark = "#222222";
+            var blue = "#5c7285", orange = "#b58c67", indigo = "#7e6c88";
+
+            cSL = new Chart(document.getElementById("csl"), {
+                type: "bar", data: {
+                    labels: [], datasets: [
+                        { label: "US", data: [], backgroundColor: blue, borderWidth: 0, borderRadius: 3 },
+                        { label: "Canada", data: [], backgroundColor: orange, borderWidth: 0, borderRadius: 3 }
+                    ]
+                }, options: {
+                    indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: "top", labels: { font: { size: 10 }, padding: 10 } } },
+                    scales: { x: { stacked: false, grid: { color: gridColor }, ticks: { color: axisColor } }, y: { grid: { display: false }, ticks: { color: textDark, font: { size: 10 } } } }
+                }
+            });
+
+            cPOD = new Chart(document.getElementById("cpod"), {
+                type: "doughnut", data: { labels: ["POTI", "BATUMI"], datasets: [{ data: [0, 0], backgroundColor: [blue, indigo], borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: "68%", plugins: { legend: { position: "bottom", labels: { padding: 14, font: { size: 11 } } } } }
+            });
+
+            cMON = new Chart(document.getElementById("cmon"), {
+                type: "bar", data: { labels: ML, datasets: [{ label: "Containers", data: MK.map(function () { return 0 }), backgroundColor: blue, borderWidth: 0, borderRadius: 3 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { x: { grid: { display: false }, ticks: { color: axisColor, font: { size: 9 } } }, y: { grid: { color: gridColor }, ticks: { color: axisColor } } }
+                }
+            });
+
+            cTS = new Chart(document.getElementById("cts"), {
+                type: "bar", data: { labels: [], datasets: [{ label: "Containers", data: [], backgroundColor: indigo, borderWidth: 0, borderRadius: 3 }] },
+                options: {
+                    indexAxis: "y", responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { x: { grid: { color: gridColor }, ticks: { color: axisColor } }, y: { grid: { display: false }, ticks: { color: textDark, font: { size: 10 } } } }
+                }
+            });
+
+            // NEW — per-vessel stacked bar
+            cVESSEL = new Chart(document.getElementById("cvessel"), {
+                type: "bar", data: {
+                    labels: [], datasets: [
+                        { label: "US", data: [], backgroundColor: blue, borderWidth: 0, borderRadius: 3 },
+                        { label: "Canada", data: [], backgroundColor: orange, borderWidth: 0, borderRadius: 3 }
+                    ]
+                }, options: {
+                    indexAxis: "y", responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: "top", labels: { font: { size: 10 }, padding: 10 } },
+                        tooltip: { callbacks: { label: function (ctx) { return " " + ctx.dataset.label + ": " + ctx.raw.toLocaleString() + " ctrs" } } }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { color: gridColor }, ticks: { color: axisColor } },
+                        y: { stacked: true, grid: { display: false }, ticks: { color: textDark, font: { size: 9, weight: "600" } } }
+                    }
+                }
+            });
+
+            // NEW — per-terminal grouped bar
+            cTERM = new Chart(document.getElementById("cterm"), {
+                type: "bar", data: {
+                    labels: [], datasets: [
+                        { label: "US", data: [], backgroundColor: blue, borderWidth: 0, borderRadius: 3 },
+                        { label: "Canada", data: [], backgroundColor: orange, borderWidth: 0, borderRadius: 3 }
+                    ]
+                }, options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, position: "top", labels: { font: { size: 10 }, padding: 10 } },
+                        tooltip: { callbacks: { label: function (ctx) { return " " + ctx.dataset.label + ": " + ctx.raw.toLocaleString() + " ctrs" } } }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: textDark, font: { weight: "600" } } },
+                        y: { stacked: true, grid: { color: gridColor }, ticks: { color: axisColor } }
+                    }
+                }
+            });
+
+            // NEW — terminal share donut
+            var termColors = ["#5c7285", "#819171", "#9e6b6b", "#b58c67", "#7e6c88", "#60868f", "#8c7a6b", "#596164"];
+            cTERMD = new Chart(document.getElementById("ctermdonut"), {
+                type: "doughnut", data: { labels: [], datasets: [{ data: [], backgroundColor: termColors, borderWidth: 2, borderColor: "#fff", hoverOffset: 5 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: "58%",
+                    plugins: { legend: { position: "bottom", labels: { font: { size: 10 }, padding: 10, boxWidth: 10 } } }
+                }
+            });
+
+            // ── Event listeners ──
+            document.querySelectorAll(".mb").forEach(function (b) {
+                b.addEventListener("click", function () {
+                    var m = this.getAttribute("data-m");
+                    if (AM.has(m)) { AM.delete(m); this.classList.remove("on") } else { AM.add(m); this.classList.add("on") }
+                    document.querySelectorAll(".pb").forEach(function (x) { x.classList.remove("on") });
+                    update();
+                });
+            });
+            document.querySelectorAll(".pb").forEach(function (b) {
+                b.addEventListener("click", function () {
+                    AM.clear();
+                    document.querySelectorAll(".mb").forEach(function (x) { x.classList.remove("on") });
+                    document.querySelectorAll(".pb").forEach(function (x) { x.classList.remove("on") });
+                    this.classList.add("on"); update();
+                });
+            });
+            document.getElementById("si").addEventListener("input", renderTable);
+            document.querySelectorAll("thead th[data-c]").forEach(function (th) {
+                th.addEventListener("click", function () {
+                    var c = this.getAttribute("data-c");
+                    if (SC === c) SA = !SA; else { SC = c; SA = true; } renderTable();
+                });
+            });
+
+            update();
+        };
+    </script>
+</body>
+
+</html>
