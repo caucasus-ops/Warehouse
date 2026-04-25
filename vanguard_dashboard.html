@@ -96,6 +96,14 @@ body{background:var(--bg0);color:var(--txt1);font-family:'Georgia','Times New Ro
 .kpi-val{font-size:28px;font-weight:700;line-height:1;margin-bottom:5px;font-family:'Georgia',serif}
 .kpi-sub{font-size:10px;color:var(--txt2);line-height:1.2;font-family:-apple-system,sans-serif}
 
+/* Specific adjustments for Latest Week Performance KPIs */
+#kpiGridWeek .kpi-val { font-size: 20px; line-height:1.05; }
+#kpiGridWeek .kpi-lbl { font-size: 8.5px; margin-bottom:4px; padding-right: 54px; }
+#kpiGridWeek .kpi-sub { font-size: 9px; line-height:1.35; }
+#kpiGridWeek .kpi { padding: 10px 10px 8px; min-height: 106px; }
+#kpiGridWeek .kpi .kpi-stripe { top: 0; }
+#kpiGridWeek .kpi div[style*="position:absolute"] { top: 8px; right: 8px; font-size: 9px; padding: 2px 5px; }
+
 /* ── CHART CARDS ── */
 .grid3{display:grid;grid-template-columns:2fr 1fr 1fr;gap:14px;margin-bottom:14px}
 .grid2{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-bottom:14px}
@@ -802,12 +810,12 @@ function renderKPIs(){
       const color = isGood ? '#3a7d5a' : '#b94040';
       const bg = isGood ? '#edf6f0' : '#fdf0f0';
       const arrow = cur >= prv ? '▲' : '▼';
-      return `<div style="position:absolute; top:12px; right:12px; font-size:10px; font-weight:700; color:${color}; background:${bg}; padding:2px 6px; border-radius:4px; border:1px solid ${isGood?'#9dcfb5':'#e8b4b4'}">${arrow} ${Math.abs(pct)}%</div>`;
+      return `<div style="position:absolute; top:8px; right:8px; font-size:9px; font-weight:700; color:${color}; background:${bg}; padding:2px 5px; border-radius:4px; border:1px solid ${isGood?'#9dcfb5':'#e8b4b4'}">${arrow} ${Math.abs(pct)}%</div>`;
     };
     const stringBadge = (cur, prv) => {
       if(!isWeek || !prevSt || !prv) return '';
-      if(cur === prv) return `<div style="position:absolute; top:12px; right:12px; font-size:10px; font-weight:700; color:#6b6460; background:#f0ebe1; padding:2px 6px; border-radius:4px; border:1px solid #e2ddd5">= Same</div>`;
-      return `<div style="position:absolute; top:12px; right:12px; font-size:10px; font-weight:700; color:#3a7d5a; background:#edf6f0; padding:2px 6px; border-radius:4px; border:1px solid #9dcfb5">New!</div>`;
+      if(cur === prv) return `<div style="position:absolute; top:8px; right:8px; font-size:9px; font-weight:700; color:#6b6460; background:#f0ebe1; padding:2px 5px; border-radius:4px; border:1px solid #e2ddd5">= Same</div>`;
+      return `<div style="position:absolute; top:8px; right:8px; font-size:9px; font-weight:700; color:#3a7d5a; background:#edf6f0; padding:2px 5px; border-radius:4px; border:1px solid #9dcfb5">New!</div>`;
     };
 
 
