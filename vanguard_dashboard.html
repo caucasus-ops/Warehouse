@@ -244,6 +244,13 @@ tbody tr:hover{background:var(--bg2)}
   <div class="err-log" id="errLog"></div>
 </div>
 
+<!-- NAVIGATION TABS -->
+<div class="page-tabs" style="display:flex; gap:14px; margin-bottom:20px; border-bottom:1px solid var(--bdr); padding-bottom:0;">
+  <button class="pt on" onclick="switchPage('main', this)" style="padding:10px 16px; border:none; background:none; font-size:13px; font-weight:700; cursor:pointer; color:var(--txt1); border-bottom:3px solid var(--blue); font-family:-apple-system,sans-serif; text-transform:uppercase; letter-spacing:0.05em; transition:0.2s; margin-bottom:-1px;">Operations Overview</button>
+  <button class="pt" onclick="switchPage('advanced', this)" style="padding:10px 16px; border:none; background:none; font-size:13px; font-weight:700; cursor:pointer; color:var(--txt3); border-bottom:3px solid transparent; font-family:-apple-system,sans-serif; text-transform:uppercase; letter-spacing:0.05em; transition:0.2s; margin-bottom:-1px;">Advanced Analytics</button>
+</div>
+
+<div id="page-main">
 <!-- KPIs -->
 <div class="sec">Key Performance Indicators <span style="font-size:10px; color:var(--txt3); margin-left:8px; font-weight:normal; text-transform:none;">(Overall Filtered Range)</span></div>
 <div class="kpi-grid" id="kpiGrid"><div class="loader"><div class="spin"></div><span>Loading live data…</span></div></div>
@@ -359,9 +366,40 @@ tbody tr:hover{background:var(--bg2)}
 </div>
 
 <div style="height:40px"></div>
+</div><!-- /page-main -->
+
+<!-- ADVANCED ANALYTICS PAGE -->
+<div id="page-advanced" style="display:none;">
+  <div class="grid22">
+    <div class="card">
+      <div class="ch"><div class="ct">Driver Output (80/20 Rule)</div><div class="cs">Pareto Chart (Cumulative Volume)</div></div>
+      <div style="height:280px"><canvas id="cPareto"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ch"><div class="ct">Driver Performance Targets</div><div class="cs">Daily Avg vs Personal Record</div></div>
+      <div id="cBullet" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+  </div>
+  
+  <div class="card" style="margin-bottom:14px;">
+    <div class="ch"><div class="ct">Driver Efficiency Matrix</div><div class="cs">Avg Daily Moves vs Active Days (Bubble Size = Total Volume)</div></div>
+    <div style="height:320px"><canvas id="cMatrix"></canvas></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;">
+    <div class="ch"><div class="ct">Activity Heatmap</div><div class="cs">Daily Moves Intensity (Filtered Range)</div></div>
+    <div id="cHeatmap" style="display:flex; gap:3px; overflow-x:auto; padding-bottom:10px;"></div>
+  </div>
+  <div style="height:40px"></div>
+</div><!-- /page-advanced -->
+
 </div><!-- /wrap -->
 
 <script>
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+  alert("JS ERROR: " + msg + "\nLine: " + lineNo + "\nCol: " + columnNo);
+  return false;
+};
 // ═══════════════════════════════════════════════════════════
 //  CONFIG
 // ═══════════════════════════════════════════════════════════
@@ -686,6 +724,9 @@ function render(){
   renderDOW(); renderShare(); renderIngate(); renderStorage();
   renderConsistency(); renderMonthly(); renderTopBot(); renderTable();
   renderGauge();
+  if(document.getElementById('page-advanced').style.display !== 'none') {
+    renderAdvanced();
+  }
 }
 
 // ── KPIs ──────────────────────────────────────────────────
@@ -714,6 +755,25 @@ function renderKPIs(){
     const totEmp    =dataset.reduce((s,d)=>s+ads.reduce((ss,dr)=>ss+(d.drivers[dr]?.empties||0),0),0);
     const totIng    =dataset.reduce((s,d)=>s+ads.reduce((ss,dr)=>ss+(d.drivers[dr]?.ingated||0),0),0);
     const totStor   =dataset.reduce((s,d)=>s+ads.reduce((ss,dr)=>ss+(d.drivers[dr]?.storage||0),0),0);
+    
+    const dateGroups = {};
+    dataset.forEach(d => {
+      if(!dateGroups[d.date]) dateGroups[d.date] = {m:0, e:0, i:0, s:0};
+      ads.forEach(dr => {
+        if(d.drivers[dr]) {
+          dateGroups[d.date].m += (d.drivers[dr].totalMoves||0);
+          dateGroups[d.date].e += (d.drivers[dr].empties||0);
+          dateGroups[d.date].i += (d.drivers[dr].ingated||0);
+          dateGroups[d.date].s += (d.drivers[dr].storage||0);
+        }
+      });
+    });
+    const sortedDates = Object.keys(dateGroups).sort();
+    const hMoves = sortedDates.map(dt => dateGroups[dt].m).slice(-14);
+    const hEmp = sortedDates.map(dt => dateGroups[dt].e).slice(-14);
+    const hIng = sortedDates.map(dt => dateGroups[dt].i).slice(-14);
+    const hStor = sortedDates.map(dt => dateGroups[dt].s).slice(-14);
+
     const daily     =dataset.map(d=>ads.reduce((s,dr)=>s+(d.drivers[dr]?.totalMoves||0),0));
     const active    =daily.filter(v=>v>0);
     const avg       =active.length?totMoves/active.length:0;
@@ -728,7 +788,7 @@ function renderKPIs(){
     const dTot      ={}; ads.forEach(d=>dTot[d]=dataset.reduce((s,e)=>s+(e.drivers[d]?.totalMoves||0),0));
     const top       =ads.slice().sort((a,b)=>dTot[b]-dTot[a])[0]||'—';
     const topPct    =totMoves>0?((dTot[top]||0)/totMoves*100).toFixed(1):0;
-    return { totMoves, totEmp, totIng, totStor, avg, median, maxD, minD, top, topPct, activeLen: active.length, topTot: dTot[top]||0 };
+    return { totMoves, totEmp, totIng, totStor, avg, median, maxD, minD, top, topPct, activeLen: active.length, topTot: dTot[top]||0, hMoves, hEmp, hIng, hStor };
   }
 
   const colors={blue:'#4a6fa5',green:'#3a7d5a',cyan:'#2e7fa8',violet:'#6b5da8',amber:'#c97a2a',red:'#b94040',orange:'#c0622a'};
@@ -750,6 +810,7 @@ function renderKPIs(){
       return `<div style="position:absolute; top:12px; right:12px; font-size:10px; font-weight:700; color:#3a7d5a; background:#edf6f0; padding:2px 6px; border-radius:4px; border:1px solid #9dcfb5">New!</div>`;
     };
 
+
     const svgTruck = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="7" width="14" height="10" rx="1"/><path d="M16 7h4l2 3v7h-6"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>`;
     const svgContainer = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="6" width="20" height="12" rx="1"/><path d="M6 6v12M10 6v12M14 6v12M18 6v12"/></svg>`;
     const svgParking = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16V8h4a2 2 0 0 1 0 4H9"/></svg>`;
@@ -759,11 +820,24 @@ function renderKPIs(){
     const svgDown = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>`;
     const svgTrophy = `<svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"><path d="M8 21h8M12 17v4M7 4h10M6 4h12v6a6 6 0 0 1-12 0V4z"/><path d="M6 5H4a2 2 0 0 0-2 2v2a5 5 0 0 0 5 5h1M18 5h2a2 2 0 0 1 2 2v2a5 5 0 0 1-5 5h-1"/></svg>`;
 
+    function makeSparkline(dataArr) {
+      if(!dataArr || dataArr.length < 2) return '';
+      const max = Math.max(...dataArr) || 1;
+      const min = Math.min(...dataArr);
+      const range = max - min || 1;
+      const pts = dataArr.map((v, i) => {
+        const x = (i / (dataArr.length - 1)) * 100;
+        const y = 24 - (((v - min) / range) * 24);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      return `<svg viewBox="-2 -2 104 28" width="60" height="24" style="overflow:visible; opacity:0.45; margin-top:-4px;"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    }
+
     const kpis=[
-      {c:'blue',  icon:svgTruck,     lbl:'Total Moves',       val:st.totMoves.toLocaleString(),          sub:`${st.activeLen} active days`, bdg: badge(st.totMoves, prevSt?.totMoves)},
-      {c:'green', icon:svgContainer, lbl:'Empties',           val:st.totEmp.toLocaleString(),             sub:'Containers returned', bdg: badge(st.totEmp, prevSt?.totEmp)},
-      {c:'cyan',  icon:svgContainer, lbl:'Ingated',           val:st.totIng.toLocaleString(),             sub:'Containers ingated', bdg: badge(st.totIng, prevSt?.totIng)},
-      {c:'violet',icon:svgParking,   lbl:'Storage',           val:st.totStor.toLocaleString(),            sub:'Delivery to storage', bdg: badge(st.totStor, prevSt?.totStor)},
+      {c:'blue',  icon:!isWeek ? makeSparkline(st.hMoves) : svgTruck,     lbl:'Total Moves',       val:st.totMoves.toLocaleString(),          sub:`${st.activeLen} active days`, bdg: badge(st.totMoves, prevSt?.totMoves)},
+      {c:'green', icon:!isWeek ? makeSparkline(st.hEmp) : svgContainer,   lbl:'Empties',           val:st.totEmp.toLocaleString(),             sub:'Containers returned', bdg: badge(st.totEmp, prevSt?.totEmp)},
+      {c:'cyan',  icon:!isWeek ? makeSparkline(st.hIng) : svgContainer,   lbl:'Ingated',           val:st.totIng.toLocaleString(),             sub:'Containers ingated', bdg: badge(st.totIng, prevSt?.totIng)},
+      {c:'violet',icon:!isWeek ? makeSparkline(st.hStor) : svgParking,    lbl:'Storage',           val:st.totStor.toLocaleString(),            sub:'Delivery to storage', bdg: badge(st.totStor, prevSt?.totStor)},
       {c:'amber', icon:svgAvg,       lbl:'Avg / Day',         val:st.avg.toFixed(1),                      sub:'Active days only', bdg: badge(st.avg, prevSt?.avg)},
       {c:'blue',  icon:svgMed,       lbl:'Median / Day',      val:(st.median % 1 === 0 ? st.median : st.median.toFixed(1)), sub:'Active days only', bdg: badge(st.median, prevSt?.median)},
       {c:'green', icon:svgUp,        lbl:'Best Day',          val:st.maxD,                               sub:'Maximum in one day', bdg: badge(st.maxD, prevSt?.maxD)},
@@ -1256,6 +1330,251 @@ function doSortTable(col,force=false){
   if(tblData.length>PAGE) html+=`<tr><td colspan="${3+ads.length+4}" style="color:#8a96b0;text-align:center;padding:10px;font-style:italic">… ${(tblData.length-PAGE).toLocaleString()} more rows — apply filters to narrow the view</td></tr>`;
   html+='</tbody></table>';
   document.getElementById('tblWrap').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ADVANCED ANALYTICS PAGE
+// ═══════════════════════════════════════════════════════════
+window.switchPage = function(page, btn) {
+  document.querySelectorAll('.pt').forEach(b => {
+    b.style.color = 'var(--txt3)';
+    b.style.borderBottomColor = 'transparent';
+  });
+  if(btn) {
+    btn.style.color = 'var(--txt1)';
+    btn.style.borderBottomColor = 'var(--blue)';
+  }
+  document.getElementById('page-main').style.display = page === 'main' ? 'block' : 'none';
+  document.getElementById('page-advanced').style.display = page === 'advanced' ? 'block' : 'none';
+  if(page === 'advanced') renderAdvanced();
+}
+
+function renderAdvanced() {
+  renderPareto();
+  renderBullets();
+  renderMatrix();
+  renderHeatmap();
+}
+
+// ── PARETO CHART (80/20 RULE) ──────────────────────────────
+function renderPareto() {
+  const ads = AD();
+  const dTot = ads.map(d => ({ d, v: filtered.reduce((s,e)=>s+mv(e,d),0) })).filter(x => x.v > 0);
+  dTot.sort((a, b) => b.v - a.v);
+  
+  const totalMoves = dTot.reduce((s, x) => s + x.v, 0);
+  let cumulative = 0;
+  const paretoLine = dTot.map(x => {
+    cumulative += x.v;
+    return (cumulative / totalMoves) * 100;
+  });
+
+  destroyChart('cPareto');
+  charts['cPareto'] = new Chart(document.getElementById('cPareto').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: dTot.map(x => x.d),
+      datasets: [
+        {
+          type: 'line',
+          label: 'Cumulative %',
+          data: paretoLine,
+          borderColor: '#c97a2a',
+          backgroundColor: '#c97a2a',
+          borderWidth: 2,
+          yAxisID: 'y1',
+          tension: 0.3,
+          pointRadius: 2
+        },
+        {
+          type: 'bar',
+          label: 'Total Moves',
+          data: dTot.map(x => x.v),
+          backgroundColor: '#4a6fa5',
+          borderRadius: 4,
+          borderWidth: 0,
+          yAxisID: 'y'
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => {
+              if (c.datasetIndex === 0) {
+                const indPct = (dTot[c.dataIndex].v / totalMoves) * 100;
+                return ` ${indPct.toFixed(1)}% of total (Cumulative: ${c.raw.toFixed(1)}%)`;
+              }
+              return ` ${c.raw.toLocaleString()} moves`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: {family: '-apple-system,sans-serif', size: 10, weight: 600}, color: '#6b6460' } },
+        y: { beginAtZero: true, position: 'left', grid: { color: '#e2ddd5' } },
+        y1: { beginAtZero: true, position: 'right', max: 100, grid: { display: false }, ticks: { callback: v => v + '%' } }
+      }
+    }
+  });
+}
+
+// ── BULLET CHARTS ──────────────────────────────────────────
+function renderBullets() {
+  const ads = AD();
+  const personalRecords = ads.map(d => {
+    const daily = filtered.map(e => mv(e, d)).filter(v => v > 0);
+    return { d, record: daily.length ? Math.max(...daily) : 0 };
+  });
+  const maxScale = Math.max(...personalRecords.map(r => r.record), 1) * 1.05;
+
+  const html = personalRecords.map(({ d, record }) => {
+    const daily = filtered.map(e => mv(e, d)).filter(v => v > 0);
+    const avg = daily.length ? daily.reduce((a, b) => a + b, 0) / daily.length : 0;
+    const target = record || 1;
+    const avgPct = (avg / maxScale) * 100;
+    const tgtPct = (target / maxScale) * 100;
+
+    let color = '#b94040';
+    if (target > 0) {
+      if (avg >= target * 0.75) color = '#3a7d5a';
+      else if (avg >= target * 0.5) color = '#c97a2a';
+    }
+
+    return `
+      <div>
+        <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px; font-weight:600; font-family:-apple-system,sans-serif; color:var(--txt1);">
+          <span>${d}</span>
+          <span>${avg.toFixed(1)} / ${target} (Personal Best)</span>
+        </div>
+        <div style="position:relative; height:18px; background:#eef0f4; border-radius:3px; overflow:hidden;">
+          <div style="position:absolute; top:0; left:0; height:100%; width:${avgPct}%; background:${color}; opacity:0.85;"></div>
+          ${target > 0 ? `<div style="position:absolute; top:0; left:${tgtPct}%; height:100%; width:2px; background:#1a1d27; z-index:2;"></div>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('cBullet').innerHTML = html;
+}
+
+// ── MATRIX ───────────────────────────────────────────────
+function renderMatrix() {
+  const ads = AD();
+  const dataPoints = ads.map(d => {
+    const daily = filtered.map(e=>mv(e,d)).filter(v=>v>0);
+    if (!daily.length) return null;
+    const total = daily.reduce((a,b)=>a+b,0);
+    const avg = total / daily.length;
+    const days = daily.length;
+    return { d, x: avg, y: days, r: total }; 
+  }).filter(Boolean);
+
+  if(!dataPoints.length) {
+    document.getElementById('cMatrix').innerHTML = '';
+    return;
+  }
+
+  const maxR = Math.max(...dataPoints.map(p => p.r));
+  const minR = Math.min(...dataPoints.map(p => p.r));
+  
+  const bubbleData = dataPoints.map(p => {
+    const scale = maxR > minR ? (p.r - minR) / (maxR - minR) : 1;
+    const radius = 6 + (scale * 22); 
+    return { x: parseFloat(p.x.toFixed(1)), y: p.y, r: radius, _driver: p.d, _total: p.r };
+  });
+
+  destroyChart('cMatrix');
+  charts['cMatrix'] = new Chart(document.getElementById('cMatrix').getContext('2d'), {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        label: 'Drivers',
+        data: bubbleData,
+        backgroundColor: bubbleData.map(p => (DCOLOR[p._driver] || '#3a7d5a') + 'b3'),
+        borderColor: bubbleData.map(p => DCOLOR[p._driver] || '#3a7d5a'),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: c => {
+              const d = c.raw;
+              return `${d._driver}: ${d.x} avg, ${d.y} days (${d._total} moves)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { 
+          title: { display: true, text: 'Average Daily Moves', color: '#6b6460', font: {size: 11, weight: 600} },
+          grid: { color: '#e2ddd5' }
+        },
+        y: { 
+          title: { display: true, text: 'Total Active Days', color: '#6b6460', font: {size: 11, weight: 600} },
+          beginAtZero: true,
+          grid: { color: '#e2ddd5' }
+        }
+      }
+    }
+  });
+}
+
+// ── HEATMAP ──────────────────────────────────────────────
+function renderHeatmap() {
+  const dateMap = {};
+  filtered.forEach(d => {
+    dateMap[d.date.toISOString().split('T')[0]] = AD().reduce((s,dr)=>s+(d.drivers[dr]?.totalMoves||0),0);
+  });
+  const dates = Object.keys(dateMap).sort();
+  if(!dates.length) {
+    document.getElementById('cHeatmap').innerHTML = '<div style="padding:10px; color:var(--txt3); font-size:12px;">No data</div>';
+    return;
+  }
+  
+  const maxMoves = Math.max(...Object.values(dateMap));
+  const startObj = new Date(dates[0] + "T00:00:00");
+  startObj.setDate(startObj.getDate() - startObj.getDay());
+  const endObj = new Date(dates[dates.length-1] + "T00:00:00");
+  
+  let current = new Date(startObj);
+  let html = '';
+  
+  while(current <= endObj || current.getDay() !== 0) {
+    if(current.getDay() === 0) {
+      const isFirstWeek = current.getDate() <= 7;
+      let monthLbl = '';
+      if(isFirstWeek) {
+        monthLbl = current.toLocaleString('default', { month: 'short' });
+        if(current.getMonth() === 0) monthLbl += " '" + current.getFullYear().toString().slice(-2);
+      }
+      html += `<div style="display:flex; flex-direction:column; gap:3px;">`;
+      html += `<div style="height:14px; font-size:10px; color:var(--txt3); overflow:visible; white-space:nowrap; margin-bottom:2px;">${monthLbl}</div>`;
+    }
+    
+    const dStr = current.toISOString().split('T')[0];
+    const moves = dateMap[dStr];
+    
+    let color = '#edf0f4';
+    if(moves > 0) {
+      const i = moves / maxMoves;
+      if(i > 0.75) color = '#1e5a3c';
+      else if(i > 0.5) color = '#3a7d5a';
+      else if(i > 0.25) color = '#6bb089';
+      else color = '#a3d2b9';
+    }
+    html += `<div title="${dStr}: ${moves||0} moves" style="width:14px; height:14px; border-radius:2px; background:${color}; cursor:crosshair;"></div>`;
+    
+    current.setDate(current.getDate() + 1);
+    if(current.getDay() === 0) html += `</div>`;
+  }
+  document.getElementById('cHeatmap').innerHTML = html;
 }
 </script>
 </body>
